@@ -293,3 +293,14 @@ footprint=T1.75_LED
 }
 C 39400 42400 1 0 0 gnd-1.sym
 C 39300 44500 1 0 0 vcc-1.sym
+C 31000 36500 0 0 0 title-A2.sym
+T 47300 37200 9 10 1 0 0 0 1
+COMPUTRON 3000 - Power supply board
+T 47300 36900 9 10 1 0 0 0 1
+power.sch
+T 47300 36600 9 10 1 0 0 0 1
+1
+T 48800 36600 9 10 1 0 0 0 1
+1
+T 51200 36600 9 10 1 0 0 0 1
+David Oberhollenzer
