@@ -1,0 +1,102 @@
+
+                                COMPUTRON 3000
+                                **************
+
+  The COMPUTRON 3000 project is an effort to create a retro computing platform
+  around the Z80 8 bit micro processor to toy and experiment with
+  never-was-state-of-the-art hardware.
+
+  It is currently still in planning phase, but the existing schematics should
+  (theoretically) already yield something working.
+
+  The text below is (for now) just a random assortment of ideas that should be
+  writted down somewhere.
+
+ LICENSE
+ *******
+
+  The files and documents of the COMPUTRON 3000 are released under the terms
+  and conditions of the GNU General Public License, version 3 or later
+  (at your choice).
+
+  For terms and condidtions of the GNU GPLv3 can be found in the file
+  "LICENSE"
+
+ System Bus
+ **********
+          ___
+ I/O 0   |_|_|     A0
+ I/O 1   |_|_|     A1
+ I/O 2   |_|_|     A2
+ I/O 3   |_|_|     A3
+ I/O 4   |_|_|     A4
+ I/O 5   |_|_|     A5
+ I/O 6   |_|_|     A6
+ I/O 7   |_|_|     A7
+ /MREQ   |_|_|     A8
+ /IORQ   |_|_|     A9
+ /IRQ0   |_|_|     A10
+ /IRQ1   |_|_|     A11
+ /IRQ2   |_|_|     A12
+ /IRQ3   |_|_|     A13
+ /IRQ4   |_|_|     A14
+ /IRQ5   |_|_|     A15
+ /IRQ6   |_|_|     /RD
+ GND     |_|_|     /WR
+ +5V     |_|_|     /BUSREQ
+ /RESET  |_|_|     /BUSACK
+
+
+  I/O 0 ... I/O 7     bidirectional I/O lines
+  A0 ... A15          CPU address lines (A0 ... A15 for memory address,
+                                         A0 ... A7 for I/O address)
+  /MREQ               pulled low by CPU to access memory
+  /IOREQ              pulled low by CPU to access bus device
+  /RD                 pulled low by CPU to read from memory or bus device
+  /WR                 pulled low by CPU to write to memory or bus device
+
+  /BUSREQ             pulled low by bus device to acquire system bus
+                      (CPU outputs go tri-state high impedance, used for
+                      e.g. cycle stealing DMA). Accessed through open drain
+                      logic, pull up resistor in power supply.
+  /BUSACK             pulled low by CPU to acknowledge bus request
+                      (i.e. CPU outputs are now tri-state high impedance)
+
+  /IRQ0 ... /IRQ6     Interrupt request 0 to 7, pulled low by I/O device to
+                      trigger interrupt. Accessed through open drain logic,
+                      pull up resistors in power supply.
+  GND                 Ground rail.
+  +5V                 Positive supply (5V) rail.
+  /RESET              System reset, pulled high by power supply using pull
+                      up resistor and capacitor (power-on-reset). Pull low
+                      to trigger full system reset.
+
+ I/O devices
+ ***********
+
+   Interrupt controler & bank switching logic
+   ******************************************
+
+     Address: 0x00
+
+     A read from that address returns last IRQ number negated (i.e. bits
+     have to be flipped to get interrupt number).
+
+     Write to that address selects RAM bank.
+
+
+ Memory Map
+ **********
+
+   Address
+             ____________
+    0x0000  |            |
+            |  Boot ROM  |
+    0x7FFF  |____________|____________ ___    ___ ____________
+    0x8000  |            |            |   \  \   |            |
+            | RAM Bank 0 | RAM Bank 1 |   /  /   | RAM Bank F |
+    0xFFFF  |____________|____________|___\  \___|____________|
+
+     -> 16 bit physical address (64kB addrassable)
+     -> 32 kB ROM + 512 kB RAM as 32kB pages
+
