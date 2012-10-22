@@ -25,9 +25,9 @@ byte memory_read( int param, ushort address )
     byte v = 0x00;
     unsigned int a = address & 0x7FFF;
 
-    if( address & 0x1000 )
+    if( address & 0x8000 )
     {
-        a += (((unsigned int)param) * 0xFFFF);
+        a |= (param & 0x0F) << 16;
 
         if( a < ram_bytes )
             v = ram[ a ];
@@ -44,9 +44,9 @@ void memory_write( int param, ushort address, byte data )
 {
     unsigned int a = address & 0x7FFF;
 
-    a += (((unsigned int)param) * 0xFFFF);
+    a |= (param & 0x0F) << 16;
 
-    if( (address & 0x1000) && (a < ram_bytes) )
+    if( (address & 0x8000) && (a < ram_bytes) )
     {
         ram[ a ] = data;
     }
@@ -55,7 +55,15 @@ void memory_write( int param, ushort address, byte data )
 /******************* bus I/O *******************/
 byte bus_read( int param, ushort address )
 {
-    (void)param; (void)address;
+    (void)param;
+
+    address &= 0x00FF;
+
+    if( address == RS232_DEVICE_ADDRESS )
+    {
+        return getchar( );
+    }
+
     return 0;
 }
 
