@@ -6,7 +6,7 @@
   around the Z80 8 bit micro processor to toy and experiment with
   never-was-state-of-the-art hardware.
 
-  It is currently still in planning phase, but the existing schematics should
+  It is currently still in an early state, but the existing schematics should
   (theoretically) already yield something working.
 
   The text below is (for now) just a random assortment of ideas that should be
@@ -24,50 +24,64 @@
 
  System Bus
  **********
-          ___
- I/O 0   |_|_|     A0
- I/O 1   |_|_|     A1
- I/O 2   |_|_|     A2
- I/O 3   |_|_|     A3
- I/O 4   |_|_|     A4
- I/O 5   |_|_|     A5
- I/O 6   |_|_|     A6
- I/O 7   |_|_|     A7
- /MREQ   |_|_|     A8
- /IORQ   |_|_|     A9
- /IRQ0   |_|_|     A10
- /IRQ1   |_|_|     A11
- /IRQ2   |_|_|     A12
- /IRQ3   |_|_|     A13
- /IRQ4   |_|_|     A14
- /IRQ5   |_|_|     A15
- /IRQ6   |_|_|     /RD
- GND     |_|_|     /WR
- +5V     |_|_|     /BUSREQ
- /RESET  |_|_|     /BUSACK
+
+  The main board (CPU, memory and interrupt controller) and the I/O boards are
+  mounted onto a DIN 41617 backplane. To keep things simple, not all CPU lines
+  are attached to the bus, only the lower 8 bit address lines, the data bus,
+  the interrupt lines and the I/O controll lines (e.g. there's no DMA).
+
+  The pin usage of the 41617 plug is visible below:
 
 
-  I/O 0 ... I/O 7     bidirectional I/O lines
-  A0 ... A15          CPU address lines (A0 ... A15 for memory address,
-                                         A0 ... A7 for I/O address)
-  /MREQ               pulled low by CPU to access memory
-  /IOREQ              pulled low by CPU to access bus device
-  /RD                 pulled low by CPU to read from memory or bus device
-  /WR                 pulled low by CPU to write to memory or bus device
+                  DIN 41617
 
-  /BUSREQ             pulled low by bus device to acquire system bus
-                      (CPU outputs go tri-state high impedance, used for
-                      e.g. cycle stealing DMA). Accessed through open drain
-                      logic, pull up resistor in power supply.
-  /BUSACK             pulled low by CPU to acknowledge bus request
-                      (i.e. CPU outputs are now tri-state high impedance)
+       1               o-- A0
+       2    /IRQ0  --o
+       3               o-- A1
+       4    /IRQ1  --o
+       5               o-- A2
+       6    /IRQ2  --o
+       7               o-- A3
+       8    /IRQ3  --o
+       9               o-- A4
+      10    /IRQ4  --o
+      11               o-- A5
+      12    /IRQ5  --o
+      13               o-- A6
+      14    /IRQ6  --o
+      15               o-- A7
+      16    /IRQ7  --o
+      17               o-- D0
+      18    /WR    --o
+      19               o-- D1
+      20    /RD    --o
+      21               o-- D2
+      22    /IORQ  --o
+      23               o-- D3
+      24           --o
+      25               o-- D4
+      26    /RESET --o
+      27               o-- D5
+      28    +5V    --o
+      29               o-- D6
+      30    GND    --o
+      31               o-- D7
 
-  /IRQ0 ... /IRQ6     Interrupt request 0 to 7, pulled low by I/O device to
+
+  D0 ... D7           Bidirectional data bus
+  A0 ... A7           Address bus from CPU to I/O devices
+
+  /IORQ               Pulled low by CPU to access the bus device with the
+                      given address
+  /RD                 Pulled low by CPU to read from the bus device
+  /WR                 Pulled low by CPU to write to the bus device
+
+  /IRQ0 ... /IRQ7     Interrupt request 0 to 7, pulled low by I/O device to
                       trigger interrupt. Accessed through open drain logic,
-                      pull up resistors in power supply.
+                      pull up resistors on main board.
   GND                 Ground rail.
   +5V                 Positive supply (5V) rail.
-  /RESET              System reset, pulled high by power supply using pull
+  /RESET              System reset, pulled high by main board using pull
                       up resistor and capacitor (power-on-reset). Pull low
                       to trigger full system reset.
 
@@ -79,10 +93,10 @@
 
      Address: 0x00
 
-     A read from that address returns last IRQ number negated (i.e. bits
-     have to be flipped to get interrupt number).
+     -> read from 0x00 returns last IRQ number negated
+         -> bits have to be flipped to get IRQ number
 
-     Write to that address selects RAM bank.
+     -> write to 0x00 selects a RAM bank
 
 
  Memory Map
@@ -92,11 +106,18 @@
              ____________
     0x0000  |            |
             |  Boot ROM  |
+    0x03FF  |____________|
+    0x0400  |            |
+            | Shared RAM |
     0x7FFF  |____________|____________ ___    ___ ____________
     0x8000  |            |            |   \  \   |            |
             | RAM Bank 0 | RAM Bank 1 |   /  /   | RAM Bank F |
     0xFFFF  |____________|____________|___\  \___|____________|
 
      -> 16 bit physical address (64kB addrassable)
-     -> 32 kB ROM + 512 kB RAM as 32kB pages
+     -> lower 32 kB shared
+          -> 1kB boot ROM
+          -> 31kB RAM
+     -> upper 32 kB bank switched 
+          -> 512 kB RAM as 16 pages
 
