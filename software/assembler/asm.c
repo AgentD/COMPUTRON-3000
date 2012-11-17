@@ -128,7 +128,7 @@ int assemble_file( FILE* input, FILE* output )
         }
 
         /* handle assembler directives */
-        if( mnemonic == MK_4CC('O','R','G',0) )
+        if( mnemonic == MK_4CC('[','O','R','G') )
         {
             read_num( a0, &temp );
 
@@ -146,10 +146,21 @@ int assemble_file( FILE* input, FILE* output )
                     fputc( read_char( a0+i, &delta ), output );
             }
         }
+        else if( mnemonic == MK_4CC('.','D','E','F') )
+        {
+            /* add null-terminator after definition name */
+            for( i=0; a0[i] && !isspace( a0[i] ) && a0[i]!=','; ++i );
+
+            a0[i] = '\0';
+
+            /* add definition */
+            read_num( a1, &temp );
+            add_label( a0, temp, LABEL_TYPE_DEFINE );
+        }
         else if( buffer[j]==':' )
         {
             buffer[j] = '\0';
-            add_label( buffer, ftell( output ) );
+            add_label( buffer, ftell( output ), LABEL_TYPE_LABEL );
         }
         else
         {

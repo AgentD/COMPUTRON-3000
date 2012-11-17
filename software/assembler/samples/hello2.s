@@ -7,13 +7,15 @@
 ;; Used to test assembler label handling
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+.def term 0x0F      ; the terminal device
+
     LXI H, string
 
 loop:
     MOV A, M
     CPI 0x00
     JZ  end
-    OUT 0x0F
+    OUT term
     INX H
     JMP loop
 

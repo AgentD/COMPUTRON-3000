@@ -37,7 +37,8 @@ void imm8( const char* input, FILE* output )
 {
     unsigned long temp = 0;
 
-    read_num( input, &temp );
+    if( !read_num( input, &temp ) )
+        require_label( input, ftell( output ), LABEL_NEED_0 );
 
     fputc( temp & 0xFF, output );
 }

@@ -16,6 +16,9 @@
 #define LABEL_NEED_1    0x03
 #define LABEL_NEED_DIFF 0x10
 
+#define LABEL_TYPE_LABEL  0x00
+#define LABEL_TYPE_DEFINE 0x01
+
 
 
 int assemble_file( FILE* input, FILE* output );
@@ -24,7 +27,7 @@ int assemble_file( FILE* input, FILE* output );
 
 void set_base_address( unsigned long address );
 
-void add_label( const char* name, unsigned long value );
+void add_label( const char* name, unsigned long value, int type );
 
 void require_label( const char* name, unsigned long position, int type );
 

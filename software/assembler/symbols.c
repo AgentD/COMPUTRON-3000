@@ -27,7 +27,7 @@ void set_base_address( unsigned long address )
     base_address = address;
 }
 
-void add_label( const char* name, unsigned long value )
+void add_label( const char* name, unsigned long value, int type )
 {
     LABEL* new_labels;
 
@@ -52,6 +52,7 @@ void add_label( const char* name, unsigned long value )
 
     strcpy( known_labels[ num_known_labels ].name, name );
     known_labels[ num_known_labels ].position = value;
+    known_labels[ num_known_labels ].type     = type;
 
     ++num_known_labels;
 }
