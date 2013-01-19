@@ -179,6 +179,7 @@ char read_char( const char* str, int* delta )
 {
     int d = 1;
     char out = str[0];
+    char* end = NULL;
 
     if( str[0] == '\\' )        /* escape sequences */
     {
@@ -195,13 +196,13 @@ char read_char( const char* str, int* delta )
         case 'v':  out = '\v'; break;
         case '\'': out = '\''; break;
         case '\\': out = '\\'; break;
-        case 'x':  d = 4; out = strtol( str+2, NULL, 16 ); break;
-        default:   d = 5; out = strtol( str+2, NULL,  8 ); break;
+        case 'x':  out = strtol( str+2, &end, 16 ); break;
+        default:   out = strtol( str+2, &end,  8 ); break;
         }
     }
 
     if( delta )
-        *delta = d;
+        *delta = end ? (end-str) : d;
 
     return out;
 }
@@ -218,7 +219,10 @@ int read_num( const char* str, unsigned long* out )
     }
 
     /* integer literals ALWAYS start with a digit */
-    if( !isdigit( str[0] ) )
+    if( !isdigit( str[0] ) && str[0]!='+' && str[0]!='-' )
+        return 0;
+
+    if( (str[0]=='+' || str[0]=='-') && !isdigit( str[1] ) )
         return 0;
 
     /* binary literal (0b...) */
@@ -228,5 +232,74 @@ int read_num( const char* str, unsigned long* out )
         *out = strtol( str, NULL, 0 );
 
     return 1;
+}
+
+void imm8( const char* input, FILE* output )
+{
+    unsigned long temp = 0;
+    int type = LABEL_NEED_0;
+
+    if( !read_num( input, &temp ) )
+    {
+        if( *input=='-' )
+        {
+            ++input;
+            type |= LABEL_NEED_COMP;
+        }
+
+        if( *input=='+' )
+            ++input;
+
+        require_label( input, ftell( output ), type );
+    }
+
+    fputc( temp & 0xFF, output );
+}
+
+void imm16( const char* input, FILE* output, int le )
+{
+    unsigned long temp = 0;
+    int type;
+
+    if( !read_num( input, &temp ) )
+    {
+        type = le ? LABEL_NEED_01 : LABEL_NEED_10;
+
+        if( *input=='-' )
+        {
+            ++input;
+            type |= LABEL_NEED_COMP;
+        }
+
+        if( *input=='+' )
+            ++input;
+    
+        require_label( input, ftell( output ), type );
+    }
+
+    if( le )
+    {
+        fputc(  temp     & 0xFF, output );
+        fputc( (temp>>8) & 0xFF, output );
+    }
+    else
+    {
+        fputc( (temp>>8) & 0xFF, output );
+        fputc(  temp     & 0xFF, output );
+    }
+}
+
+void inst( unsigned long opcode, FILE* output )
+{
+    if( opcode>0xFFFFFF )
+        fputc( (opcode>>24) & 0xFF, output );
+
+    if( opcode>0xFFFF )
+        fputc( (opcode>>16) & 0xFF, output );
+
+    if( opcode>0xFF )
+        fputc( (opcode>>8) & 0xFF, output );
+
+    fputc( opcode & 0xFF, output );
 }
 

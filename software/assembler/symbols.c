@@ -2,11 +2,13 @@
 
 
 
-typedef struct
+typedef struct label_t
 {
     char* name;
     unsigned long position;
     int type;
+
+    struct label_t* next;
 }
 LABEL;
 
@@ -15,10 +17,6 @@ LABEL;
 static unsigned long base_address;
 static LABEL*        known_labels;
 static LABEL*        unknown_labels;
-static unsigned int  num_known_labels;
-static unsigned int  num_unknown_labels;
-static unsigned int  max_known_labels;
-static unsigned int  max_unknown_labels;
 
 
 
@@ -29,86 +27,90 @@ void set_base_address( unsigned long address )
 
 void add_label( const char* name, unsigned long value, int type )
 {
-    LABEL* new_labels;
+    LABEL* new_label;
 
-    if( num_known_labels==max_known_labels )
+    /* allocate space for a new lable */
+    new_label = malloc( sizeof(LABEL) );
+
+    if( !new_label )
+        return;             /* FIXME: handle error */
+
+    /* allocate space for the label name */
+    new_label->name = malloc( strlen(name) + 1 );
+
+    if( !new_label->name )
     {
-        new_labels = realloc( known_labels,
-                              sizeof(LABEL)*(max_known_labels+10) );
-
-        /* FIXME: handle error */
-        if( !new_labels )
-            return;
-
-        known_labels = new_labels;
-        max_known_labels += 10;
+        free( new_label );
+        return;             /* FIXME: handle error */
     }
 
-    known_labels[ num_known_labels ].name = malloc( strlen(name) + 1 );
+    /* adjust offset if required */
+    if( type==LABEL_TYPE_LABEL )
+        value += base_address;
 
-    /* FIXME: handle error */
-    if( !known_labels[ num_known_labels ].name )
-        return;
+    /* copy values */
+    strcpy( new_label->name, name );
+    new_label->position = value;
+    new_label->type     = type;
 
-    strcpy( known_labels[ num_known_labels ].name, name );
-    known_labels[ num_known_labels ].position = value;
-    known_labels[ num_known_labels ].type     = type;
-
-    ++num_known_labels;
+    /* add the label to the list */
+    new_label->next = known_labels;
+    known_labels    = new_label;
 }
 
 void require_label( const char* name, unsigned long position, int type )
 {
-    LABEL* new_labels;
+    LABEL* new_label;
 
-    if( num_unknown_labels==max_unknown_labels )
+    /* allocate space for a new lable */
+    new_label = malloc( sizeof(LABEL) );
+
+    if( !new_label )
+        return;             /* FIXME: handle error */
+
+    /* allocate space for the label name */
+    new_label->name = malloc( strlen(name) + 1 );
+
+    if( !new_label->name )
     {
-        new_labels = realloc( unknown_labels,
-                              sizeof(LABEL)*(max_unknown_labels+10) );
-
-        /* FIXME: handle error */
-        if( !new_labels )
-            return;
-
-        unknown_labels = new_labels;
-        max_unknown_labels += 10;
+        free( new_label );
+        return;             /* FIXME: handle error */
     }
 
-    unknown_labels[ num_unknown_labels ].name = malloc( strlen(name) + 1 );
+    /* copy values */
+    strcpy( new_label->name, name );
+    new_label->position = position;
+    new_label->type = type;
 
-    /* FIXME: handle error */
-    if( !unknown_labels[ num_unknown_labels ].name )
-        return;
-
-    strcpy( unknown_labels[ num_unknown_labels ].name, name );
-    unknown_labels[ num_unknown_labels ].position = position;
-    unknown_labels[ num_unknown_labels ].type = type;
-
-    ++num_unknown_labels;
+    /* add the label to the list */
+    new_label->next = unknown_labels;
+    unknown_labels  = new_label;
 }
 
 void post_process_labels( FILE* file )
 {
     unsigned long value;
-    unsigned int i, j;
+    LABEL* i;
+    LABEL* j;
 
-    for( i=0; i<num_unknown_labels; ++i )
+    for( i=unknown_labels; i; i=i->next )
     {
-        for( j=0; j<num_known_labels; ++j )
+        for( j=known_labels; j; j=j->next )
         {
-            if( strcmp( unknown_labels[i].name, known_labels[j].name ) )
+            if( strcmp( i->name, j->name ) )
                 continue;
 
-            fseek( file, unknown_labels[i].position, SEEK_SET );
+            fseek( file, i->position, SEEK_SET );
 
-            value = known_labels[j].position;
+            value = j->position;
 
-            if( unknown_labels[i].type & LABEL_NEED_DIFF )
-                value -= unknown_labels[i].position;
-            else
-                value += base_address;
+            if( i->type & LABEL_NEED_DIFF )
+                value -= i->position;
 
-            switch( unknown_labels[i].type & ~(LABEL_NEED_DIFF) )
+            if( i->type & LABEL_NEED_COMP )
+                value = ~value + 1;
+
+            switch( i->type & ~(LABEL_NEED_DIFF) )
             {
             case LABEL_NEED_10:
                 fputc( value>>8 & 0xFF, file );
@@ -131,13 +133,25 @@ void post_process_labels( FILE* file )
 
 void reset_labels( void )
 {
-    base_address = 0;
-    free( known_labels );
-    free( unknown_labels );
+    LABEL* i;
+    LABEL* old;
 
-    num_known_labels = 0;
-    num_unknown_labels = 0;
-    max_known_labels = 0;
-    max_unknown_labels = 0;
+    base_address = 0;
+
+    for( i=unknown_labels; i; )
+    {
+        old = i;
+        i = i->next;
+        free( old->name );
+        free( old );
+    }
+
+    for( i=known_labels; i; )
+    {
+        old = i;
+        i = i->next;
+        free( old->name );
+        free( old );
+    }
 }
 

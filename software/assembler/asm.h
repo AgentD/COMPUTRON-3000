@@ -15,30 +15,156 @@
 #define LABEL_NEED_0    0x02
 #define LABEL_NEED_1    0x03
 #define LABEL_NEED_DIFF 0x10
+#define LABEL_NEED_COMP 0x20
 
 #define LABEL_TYPE_LABEL  0x00
 #define LABEL_TYPE_DEFINE 0x01
 
 
 
+/**
+ * \brief Assemble a file
+ *
+ * This functions is defined in asm.c
+ *
+ * \param input  The plain text input assembly file
+ * \param output The output binary file
+ *
+ * \return Non-zero on success, zero if there was an error.
+ */
 int assemble_file( FILE* input, FILE* output );
 
 
-
+/**
+ * \brief Set the base address of the program currently being assembled
+ *
+ * This functions is defined in symbols.c
+ *
+ * This function can be called multiple times, it will alter the addresses
+ * of all labels defined afterwards.
+ *
+ * The function is called within assemble_file if a [ORG xxxx] directive is
+ * discovered.
+ *
+ * \param address The new base address
+ */
 void set_base_address( unsigned long address );
 
+/**
+ * \brief Add a label or definition
+ *
+ * This functions is defined in symbols.c
+ *
+ * This function is called within assemble_file if a label definition or a
+ * .def directive is discovered.
+ *
+ * \param name  The name of the label.
+ * \param value The value of the label (e.g. position in the output file or
+ *              value of the define).
+ * \param type  LABEL_TYPE_LABEL for ordinary labels or LABEL_TYPE_DEFINE for
+ *              definitions.
+ */
 void add_label( const char* name, unsigned long value, int type );
 
+/**
+ * \brief Require a label
+ *
+ * This functions is defined in symbols.c
+ *
+ * \param name     The name of the required label.
+ * \param position The position of the in the binary file where the label
+ *                 value is required.
+ * \param type     How to insert the label. LABEL_NEED_10 for 16 bit highbyte
+ *                 first, LABEL_NEED_01 for 16 bit lowbyte first, LABEL_NEED_0
+ *                 for 8 bit lowbyte, LABEL_NEED_1 for 8 bit highbyte.
+ *                 The flag LABEL_NEED_DIFF can be used if the difference is
+ *                 required, the flag LABEL_NEED_COMP can be used if the two's
+ *                 complement is required.
+ */
 void require_label( const char* name, unsigned long position, int type );
 
+/**
+ * \brief Resolve labels in a binary file after assembly
+ *
+ * This functions is defined in symbols.c
+ *
+ * \param file The binary file to post process
+ */
 void post_process_labels( FILE* file );
 
+/**
+ * \brief Reset all internal state of the label handling code.
+ *
+ * This functions is defined in symbols.c
+ */
 void reset_labels( void );
 
 
 
+/**
+ * \brief Embedd an 8 bit immediate value into a binary file
+ *
+ * This functions is defined in asm.c
+ *
+ * If the given string can not be converted to a numeric value,
+ * it is issued as a required label, where a possible sign is skipped
+ * and a complement flag set, if negative sign is given.
+ *
+ * \param input  The input string to convert into an 8 bit value
+ * \param output The output binary file
+ */
+void imm8( const char* input, FILE* output );
+
+/**
+ * \brief Embedd a 16 bit immediate value into a binary file
+ *
+ * This functions is defined in asm.c
+ *
+ * If the given string can not be converted to a numeric value,
+ * it is issued as a required label, where a possible sign is skipped
+ * and a complement flag set, if negative sign is given.
+ *
+ * \param input  The input string to convert into a 16 bit value.
+ * \param output The output binary file.
+ * \param le     Non-zero for little endian, zero for bit endian.
+ */
+void imm16( const char* input, FILE* output, int le );
+
+/**
+ * \brief Write an instruction into a binary file
+ *
+ * This functions is defined in asm.c
+ *
+ * \param opcode The opcode to write. It is automatically written
+ *               as a big endian value, i.e. high byte first.
+ * \param output The output binary file.
+ */
+void inst( unsigned long opcode, FILE* output );
+
+
+/**
+ * \brief Read a character literal from an input string
+ *
+ * \param str   The string to translate. Can contain things like "bla" or
+ *              "\b\r\n\033". The first character of the string is translated
+ *              into an ASCII character (parsing escape sequences, etc.)
+ * \param delta Returns the number of bytes to advance in the string, e.g. for
+ *              the escape sequence "\n", there are two bytes to advance to
+ *              get to the next character in the string.
+ *
+ * \return The translated ASCII character
+ */
 char read_char( const char* str, int* delta );
 
+/**
+ * \brief Translate an integer literal to an actual integer
+ *
+ * \param str The string to read
+ * \param out Returns the translated value
+ *
+ * \return Non-zero on success, zero on error (i.e. the integer literal is
+ *         invalid)
+ */
 int read_num( const char* str, unsigned long* out );
 
 void assemble_line_8080( unsigned long mnemonic, const char* a0,
