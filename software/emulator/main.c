@@ -6,11 +6,8 @@
 
 
 
-static unsigned int rom_bytes = 0;
-static unsigned int ram_bytes = 0;
-
-static unsigned char* rom = NULL;
-static unsigned char* ram = NULL;
+static unsigned char rom[  1024 ];
+static unsigned char ram[ 31744 ];
 
 
 
@@ -22,34 +19,38 @@ static unsigned char* ram = NULL;
 /******************* memory access *******************/
 byte memory_read( int param, ushort address )
 {
-    byte v = 0x00;
-    unsigned int a = address & 0x7FFF;
+    (void)param;
 
+    /* A15 is high -> extended RAM */
     if( address & 0x8000 )
     {
-        a |= (param & 0x0F) << 16;
-
-        if( a < ram_bytes )
-            v = ram[ a ];
-    }
-    else if( a < rom_bytes )
-    {
-        v = rom[ address ];
+        return 0;
     }
 
-    return v;
+    /* A15 is low, address < 1024 -> ROM */
+    if( address < 1024 )
+        return rom[ address ];
+
+    /* A15 is low, address >= 1024 -> RAM */
+    return ram[ address-1024 ];
 }
 
 void memory_write( int param, ushort address, byte data )
 {
-    unsigned int a = address & 0x7FFF;
+    (void)param;
 
-    a |= (param & 0x0F) << 16;
-
-    if( (address & 0x8000) && (a < ram_bytes) )
+    /* A15 is high -> extended RAM */
+    if( address & 0x8000 )
     {
-        ram[ a ] = data;
+        return;
     }
+
+    /* A15 is low, address < 1024 -> ROM */
+    if( address < 1024 )
+        rom[ address ] = data;
+
+    /* A15 is low, address >= 1024 -> RAM */
+    ram[ address-1024 ] = data;
 }
 
 /******************* bus I/O *******************/
@@ -83,9 +84,8 @@ void bus_write( int param, ushort address, byte data )
 
 int main( int argc, char** argv )
 {
-    int i;
-    FILE* romfile;
     Z80Context cpu;
+    int i;
 
     /* if no arguments, print usage info */
     if( argc == 1 )
@@ -100,49 +100,21 @@ int main( int argc, char** argv )
     {
         if( !strcmp( argv[i], "-b" ) && (i<(argc-1)) )
         {
-            romfile = fopen( argv[ i + 1 ], "rb" );
+            FILE* romfile = fopen( argv[ i + 1 ], "rb" );
 
-            fseek( romfile, 0, SEEK_END );
-            rom_bytes = ftell( romfile );
-            fseek( romfile, 0, SEEK_SET );
-
-            rom = malloc( rom_bytes );
-
-            if( rom )
+            if( !romfile )
             {
-                fread( rom, 1, rom_bytes, romfile );
-            }
-            else
-            {
-                rom_bytes = 0;
+                printf( "Could not open '%s'!\n", argv[ i + 1 ] );
+                return EXIT_FAILURE;
             }
 
+            fread( rom, 1, sizeof(rom), romfile );
             fclose( romfile );
         }
         else if( !strcmp( argv[i], "-r" ) && (i<(argc-1)) )
         {
-            ram_bytes = atoi( argv[ i + 1 ] ) * 32768;
-
-            if( ram_bytes )
-            {
-                ram = malloc( ram_bytes );
-
-                if( !ram )
-                {
-                    printf( "failed to allocate ram memory" );
-                    return EXIT_FAILURE;
-                }
-            }
+            /*ram_bytes = atoi( argv[ i + 1 ] ) * 32768;*/
         }
-    }
-
-    /* check if we have everything we need */
-    if( !rom || !rom_bytes )
-    {
-        printf( "No boot rom supplied!\n" );
-        free( ram );
-        free( rom );
-        return EXIT_FAILURE;
     }
 
     /* initialise the system */
@@ -180,10 +152,6 @@ int main( int argc, char** argv )
         /* execute next instruction */
         Z80Execute( &cpu );
     }
-
-    /* clean up */
-    free( ram );
-    free( rom );
 
     return EXIT_SUCCESS;
 }
