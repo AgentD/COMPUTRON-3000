@@ -1,0 +1,70 @@
+
+    CPU BOARD
+    *********
+
+
+         Y0                 Z80                       BUS
+        _____           ___________                 _________
+       | CLK |-------->|CLK        |_____________|\|         |
+       |_____|         |      A0.14|_____________  | A0...14 |
+                       |           |             |/|         |
+                       |       A15 |----> A15      |         |
+               VCC     |           |/|___________|\|         |
+              __|__    |      D0.7 |  ___________  | D0...7  |
+             | | | |   |           |\|           |/|         |
+             R R R R   |           |       BUSRQ ->| BUSRQ   |
+      NMI ---|-|-|-+-->|NMI  BUSACK|-------------->| BUSACK  |
+      INT ---|-|-+---->|INT    IORQ|-------------->| IORQ    |
+    BUSRQ ---|-+------>|BUSRQ  MREQ|----> MREQ     |         |
+      RST ---+----+-+->|RST      RD|----> RD       |         |
+      VCC --------|-|->|WAIT     WR|-------------->| WR      |
+                  C J  |___________|         RST ->| RST     |
+                  |_|                        INT ->| INT     |
+                  GND                        NMI ->| NMI     |
+                                          ROMSEL ->| ROMSEL  |
+                                         !ROMSEL ->| !ROMSEL |
+                                         MREQ_HI ->| MREQ_HI |
+                                        MREQ_LOW ->| MREQ_LOW|
+                                             IOR ->| IOR     |
+                                             IOW ->| IOW     |
+                                                   |_________|
+
+    ROMSEL = (A[10...14] != 0) | RD
+
+   !ROMSEL = ~ROMSEL
+   A15_INV = ~A15
+
+       IOR =      RD | IORQ
+       IOW =      WR | IORQ
+   MREQ_HI = A15_INV | MREQ
+  MREQ_LOW = A15     | MREQ
+
+
+             74688                          7404
+            ________
+      GND -|Q0    P0|- A14        1: ROMSEL -|>o- !ROMSEL
+      GND -|Q1    P1|- A13        2:    A15 -|>o- A15_INV
+      GND -|Q2    P2|- A12        3:    VCC -|>o-
+      GND -|Q3    P3|- A11        4:    VCC -|>o-
+      GND -|Q4    P4|- GND        5:    VCC -|>o-
+      GND -|Q5    P5|- A10        6:    VCC -|>o-
+      GND -|Q6    P6|- GND
+      GND -|Q7    P7|- GND
+       RD -|EN_____Y|- ROMSEL
+
+
+                        7432
+             1                        3
+            ____                     ____
+       RD -| >=1|             MREQ -| >=1|
+          A|    |-> IOR            A|    |-> MREQ_HI
+     IORQ -|____|Y         A15_INV -|____|Y
+          B                        B
+                                             
+             2                        4
+            ____                     ____
+     MREQ -| >=1|               WR -| >=1|
+          A|    |-> MREQ_LOW       A|    |-> IOW
+      A15 -|____|Y            IORQ -|____|Y
+          B                        B
+

@@ -22,82 +22,24 @@
   For terms and condidtions of the GNU GPLv3 can be found in the file
   "LICENSE"
 
- System Bus
- **********
+ Files
+ *****
 
-  The main board (CPU, memory and interrupt controller) and the I/O boards are
-  mounted onto a DIN 41617 backplane. To keep things simple, not all CPU lines
-  are attached to the bus, only the lower 8 bit address lines, the data bus,
-  the interrupt lines and the I/O controll lines (e.g. there's no DMA).
+  This list should provide some information on where to find what:
 
-  The pin usage of the 41617 plug is visible below:
+    cpu.txt   -> CPU board descritption/schematics
+    cpu.pcb   -> CPU board pcb layout
 
+    mem.txt   -> Base memory board descritption/schematics
+    mem.pcb   -> Base memory board pcb layout
 
-                  DIN 41617
+    emm.txt   -> Extended memory board descritption/schematics
+    emm.pcb   -> Extended memory board pcb layout
 
-       1               o-- A0
-       2    /IRQ0  --o
-       3               o-- A1
-       4    /IRQ1  --o
-       5               o-- A2
-       6    /IRQ2  --o
-       7               o-- A3
-       8    /IRQ3  --o
-       9               o-- A4
-      10    /IRQ4  --o
-      11               o-- A5
-      12    /IRQ5  --o
-      13               o-- A6
-      14    /IRQ6  --o
-      15               o-- A7
-      16    /IRQ7  --o
-      17               o-- D0
-      18    /WR    --o
-      19               o-- D1
-      20    /RD    --o
-      21               o-- D2
-      22    /IORQ  --o
-      23               o-- D3
-      24           --o
-      25               o-- D4
-      26    /RESET --o
-      27               o-- D5
-      28    +5V    --o
-      29               o-- D6
-      30    GND    --o
-      31               o-- D7
-
-
-  D0 ... D7           Bidirectional data bus
-  A0 ... A7           Address bus from CPU to I/O devices
-
-  /IORQ               Pulled low by CPU to access the bus device with the
-                      given address
-  /RD                 Pulled low by CPU to read from the bus device
-  /WR                 Pulled low by CPU to write to the bus device
-
-  /IRQ0 ... /IRQ7     Interrupt request 0 to 7, pulled low by I/O device to
-                      trigger interrupt. Accessed through open drain logic,
-                      pull up resistors on main board.
-  GND                 Ground rail.
-  +5V                 Positive supply (5V) rail.
-  /RESET              System reset, pulled high by main board using pull
-                      up resistor and capacitor (power-on-reset). Pull low
-                      to trigger full system reset.
-
- I/O devices
- ***********
-
-   Interrupt controler & bank switching logic
-   ******************************************
-
-     Address: 0x00
-
-     -> read from 0x00 returns last IRQ number negated
-         -> bits have to be flipped to get IRQ number
-
-     -> write to 0x00 selects a RAM bank
-
+    software/ -> Pretty random collection of software for the system
+     |
+     +- assembler/ -> Assembler source code
+     +- emulator/  -> Emulator source code
 
  Memory Map
  **********
@@ -109,15 +51,15 @@
     0x03FF  |____________|
     0x0400  |            |
             | Shared RAM |
-    0x7FFF  |____________|____________ ___    ___ ____________
-    0x8000  |            |            |   \  \   |            |
-            | RAM Bank 0 | RAM Bank 1 |   /  /   | RAM Bank F |
-    0xFFFF  |____________|____________|___\  \___|____________|
+    0x7FFF  |____________|____________ ___
+    0x8000  |            |            |   \
+            | RAM Bank 0 | RAM Bank 1 |   /
+    0xFFFF  |____________|____________|___\
 
      -> 16 bit physical address (64kB addrassable)
      -> lower 32 kB shared
           -> 1kB boot ROM
-          -> 31kB RAM
+          -> 31kB shared RAM
      -> upper 32 kB bank switched 
-          -> 512 kB RAM as 16 pages
+          -> up to 256 banks (256*32kB = 8192kB = 8MB!!)
 
