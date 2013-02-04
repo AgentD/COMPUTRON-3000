@@ -3,10 +3,10 @@
 # To read pcb files, the pcb version (or the git source date) must be >= the file version
 FileVersion[20091103]
 
-PCB["" 3100.00mil 3900.00mil]
+PCB["" 3100.00mil 100.0000mm]
 
 Grid[5000.000000 0.0000 0.0000 1]
-Cursor[1700.00mil 3850.00mil 0.000000]
+Cursor[1800.00mil 3600.00mil 0.000000]
 PolyArea[3100.006200]
 Thermal[0.500000]
 DRC[10.00mil 10.00mil 10.00mil 10.00mil 15.00mil 10.00mil]
@@ -845,8 +845,8 @@ Element["" "DIN connector, 96 pin housing" "BUS" "DIN41612C64M" 2900.00mil 350.0
 	Pin[-200.00mil 800.00mil 60.00mil 30.00mil 66.00mil 30.00mil "73" "A2" ""]
 	Pin[-200.00mil 900.00mil 60.00mil 30.00mil 66.00mil 30.00mil "74" "A1" ""]
 	Pin[-200.00mil 1000.00mil 60.00mil 30.00mil 66.00mil 30.00mil "75" "A0" ""]
-	Pin[-200.00mil 1100.00mil 60.00mil 30.00mil 66.00mil 30.00mil "76" "GND" ""]
-	Pin[-200.00mil 1200.00mil 60.00mil 30.00mil 66.00mil 30.00mil "77" "VCC" ""]
+	Pin[-200.00mil 1100.00mil 60.00mil 30.00mil 66.00mil 30.00mil "76" "" ""]
+	Pin[-200.00mil 1200.00mil 60.00mil 30.00mil 66.00mil 30.00mil "77" "" ""]
 	Pin[-200.00mil 1300.00mil 60.00mil 30.00mil 66.00mil 30.00mil "78" "IORQ" ""]
 	Pin[-200.00mil 1400.00mil 60.00mil 30.00mil 66.00mil 30.00mil "79" "RST" ""]
 	Pin[-200.00mil 1500.00mil 60.00mil 30.00mil 66.00mil 30.00mil "80" "BUSRQ" ""]
@@ -1194,10 +1194,35 @@ Element["" "SMD Cap" "C2" "" 750.00mil 2100.00mil -370.00mil -144.00mil 0 150 ""
 	ElementLine [-250.00mil 50.00mil 50.00mil 50.00mil 10.00mil]
 
 	)
+
+Element["" "Header connector, DIP pin numbering" "VCC" "HEADER2_1" 2600.00mil 100.00mil 210.00mil -50.00mil 3 100 ""]
+(
+	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 38.00mil "1" "1" "square,edge2"]
+	Pin[100.00mil 0.0000 60.00mil 30.00mil 66.00mil 38.00mil "2" "2" "edge2"]
+	ElementLine [-50.00mil -50.00mil -50.00mil 50.00mil 10.00mil]
+	ElementLine [-50.00mil 50.00mil 150.00mil 50.00mil 10.00mil]
+	ElementLine [150.00mil 50.00mil 150.00mil -50.00mil 10.00mil]
+	ElementLine [150.00mil -50.00mil -50.00mil -50.00mil 10.00mil]
+	ElementLine [-50.00mil 50.00mil 50.00mil 50.00mil 10.00mil]
+	ElementLine [50.00mil 50.00mil 50.00mil -50.00mil 10.00mil]
+
+	)
+
+Element["" "Header connector, DIP pin numbering" "GND" "HEADER2_1" 2600.00mil 3800.00mil 210.00mil -50.00mil 3 100 ""]
+(
+	Pin[0.0000 0.0000 60.00mil 30.00mil 66.00mil 38.00mil "1" "1" "square,edge2"]
+	Pin[100.00mil 0.0000 60.00mil 30.00mil 66.00mil 38.00mil "2" "2" "edge2"]
+	ElementLine [-50.00mil -50.00mil -50.00mil 50.00mil 10.00mil]
+	ElementLine [-50.00mil 50.00mil 150.00mil 50.00mil 10.00mil]
+	ElementLine [150.00mil 50.00mil 150.00mil -50.00mil 10.00mil]
+	ElementLine [150.00mil -50.00mil -50.00mil -50.00mil 10.00mil]
+	ElementLine [-50.00mil 50.00mil 50.00mil 50.00mil 10.00mil]
+	ElementLine [50.00mil 50.00mil 50.00mil -50.00mil 10.00mil]
+
+	)
 Layer(1 "top")
 (
-	Line[2750.00mil 1550.00mil 1700.00mil 1550.00mil 40.00mil 20.00mil "clearline"]
-	Line[1150.00mil 1950.00mil 1700.00mil 1950.00mil 40.00mil 20.00mil "clearline"]
+	Line[1150.00mil 1950.00mil 1600.00mil 1950.00mil 40.00mil 20.00mil "clearline"]
 	Line[1150.00mil 200.00mil 1150.00mil 1950.00mil 40.00mil 20.00mil "clearline"]
 	Line[1350.00mil 1450.00mil 1350.00mil 200.00mil 40.00mil 20.00mil "clearline"]
 	Line[1350.00mil 1450.00mil 1600.00mil 1450.00mil 40.00mil 20.00mil "clearline"]
@@ -1233,7 +1258,6 @@ Layer(1 "top")
 	Line[300.00mil 1200.00mil 300.00mil 800.00mil 0.5000mm 20.00mil "clearline"]
 	Line[300.00mil 800.00mil 350.00mil 750.00mil 0.5000mm 20.00mil "clearline"]
 	Line[350.00mil 750.00mil 1000.00mil 750.00mil 0.5000mm 20.00mil "clearline"]
-	Line[1700.00mil 1950.00mil 1700.00mil 1550.00mil 40.00mil 20.00mil "clearline"]
 	Line[1900.00mil 2100.00mil 1950.00mil 2050.00mil 0.5000mm 20.00mil "clearline"]
 	Line[1950.00mil 2050.00mil 2700.00mil 2050.00mil 0.5000mm 20.00mil "clearline"]
 	Line[1850.00mil 2050.00mil 1900.00mil 2000.00mil 0.5000mm 20.00mil "clearline"]
@@ -1372,7 +1396,6 @@ Layer(6 "bottom")
 	Line[2750.00mil 1050.00mil 1500.00mil 1050.00mil 0.5000mm 20.00mil "clearline"]
 	Line[1500.00mil 1150.00mil 2750.00mil 1150.00mil 0.5000mm 20.00mil "clearline"]
 	Line[1500.00mil 1350.00mil 2750.00mil 1350.00mil 0.5000mm 20.00mil "clearline"]
-	Line[2750.00mil 1450.00mil 1500.00mil 1450.00mil 40.00mil 20.00mil "clearline"]
 	Line[700.00mil 850.00mil 650.00mil 900.00mil 40.00mil 20.00mil "clearline"]
 	Line[650.00mil 900.00mil 650.00mil 1050.00mil 40.00mil 20.00mil "clearline"]
 	Line[450.00mil 100.00mil 1350.00mil 100.00mil 40.00mil 20.00mil "clearline"]
@@ -1643,6 +1666,11 @@ Layer(6 "bottom")
 	Line[650.00mil 3300.00mil 850.00mil 3300.00mil 40.00mil 20.00mil "clearline"]
 	Line[450.00mil 3400.00mil 850.00mil 3400.00mil 40.00mil 20.00mil "clearline"]
 	Line[800.00mil 3400.00mil 800.00mil 3000.00mil 40.00mil 20.00mil "clearline"]
+	Line[2700.00mil 3800.00mil 1800.00mil 3800.00mil 40.00mil 20.00mil "clearline"]
+	Line[1150.00mil 200.00mil 1150.00mil 300.00mil 40.00mil 20.00mil "clearline"]
+	Line[1150.00mil 300.00mil 1400.00mil 300.00mil 40.00mil 20.00mil "clearline"]
+	Line[1400.00mil 300.00mil 1600.00mil 100.00mil 40.00mil 20.00mil "clearline"]
+	Line[2700.00mil 100.00mil 1600.00mil 100.00mil 40.00mil 20.00mil "clearline"]
 )
 Layer(7 "outline")
 (
@@ -1830,13 +1858,14 @@ NetList()
 		Connect("74688-Q5")
 		Connect("74688-Q6")
 		Connect("74688-Q7")
-		Connect("BUS-GND")
 		Connect("C0-1")
 		Connect("C1-2")
 		Connect("C2-2")
 		Connect("C3-2")
 		Connect("C4-2")
 		Connect("C5-2")
+		Connect("GND-1")
+		Connect("GND-2")
 		Connect("J0-2")
 		Connect("Y0-GND")
 		Connect("Z80-GND")
@@ -1915,7 +1944,6 @@ NetList()
 		Connect("7404-VCC")
 		Connect("7432-VCC")
 		Connect("74688-VCC")
-		Connect("BUS-VCC")
 		Connect("C0-2")
 		Connect("C1-1")
 		Connect("C3-1")
@@ -1925,6 +1953,8 @@ NetList()
 		Connect("R2-1")
 		Connect("R3-1")
 		Connect("R4-1")
+		Connect("VCC-1")
+		Connect("VCC-2")
 		Connect("Y0-VCC")
 		Connect("Z80-VCC")
 		Connect("Z80-WAIT")
