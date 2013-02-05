@@ -6,7 +6,7 @@ FileVersion[20091103]
 PCB["" 3100.00mil 100.0000mm]
 
 Grid[5000.000000 0.0000 0.0000 1]
-Cursor[1800.00mil 3600.00mil 0.000000]
+Cursor[2000.00mil 3250.00mil 0.000000]
 PolyArea[3100.006200]
 Thermal[0.500000]
 DRC[10.00mil 10.00mil 10.00mil 10.00mil 15.00mil 10.00mil]
@@ -786,7 +786,7 @@ Symbol['~' 12.00mil]
 	SymbolLine[15.00mil 35.00mil 20.00mil 35.00mil 8.00mil]
 	SymbolLine[20.00mil 35.00mil 25.00mil 30.00mil 8.00mil]
 )
-Attribute("PCB::grid::unit" "mm")
+Attribute("PCB::grid::unit" "mil")
 Attribute("PCB::grid::size" "50.00mil")
 
 Element["" "SMD Cap" "C0" "" 1350.00mil 200.00mil -370.00mil -144.00mil 0 150 ""]
@@ -1675,9 +1675,9 @@ Layer(6 "bottom")
 Layer(7 "outline")
 (
 	Line[0.0000 0.0000 3100.00mil 0.0000 0.5000mm 20.00mil "clearline"]
-	Line[3100.00mil 0.0000 3100.00mil 3900.00mil 0.5000mm 20.00mil "clearline"]
-	Line[3100.00mil 3900.00mil 0.0000 3900.00mil 0.5000mm 20.00mil "clearline"]
-	Line[0.0000 3900.00mil 0.0000 0.0000 0.5000mm 20.00mil "clearline"]
+	Line[3100.00mil 0.0000 3100.00mil 100.0001mm 0.5000mm 20.00mil "clearline"]
+	Line[0.0000 99.9427mm 0.0000 0.0000 0.5000mm 20.00mil "clearline"]
+	Line[3100.00mil 100.0001mm 0.0000 100.0001mm 0.5000mm 20.00mil "clearline"]
 )
 Layer(8 "spare")
 (
