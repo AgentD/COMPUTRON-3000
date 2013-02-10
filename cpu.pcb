@@ -6,7 +6,7 @@ FileVersion[20091103]
 PCB["" 3100.00mil 100.0000mm]
 
 Grid[5000.000000 0.0000 0.0000 1]
-Cursor[2000.00mil 3250.00mil 0.000000]
+Cursor[2250.00mil 2350.00mil 0.000000]
 PolyArea[3100.006200]
 Thermal[0.500000]
 DRC[10.00mil 10.00mil 10.00mil 10.00mil 15.00mil 10.00mil]
@@ -806,7 +806,7 @@ Element["" "DIN connector, 96 pin housing" "BUS" "DIN41612C64M" 2900.00mil 350.0
 	Pin[0.0000 100.00mil 60.00mil 30.00mil 66.00mil 30.00mil "2" "A12" ""]
 	Pin[0.0000 200.00mil 60.00mil 30.00mil 66.00mil 30.00mil "3" "A13" ""]
 	Pin[0.0000 300.00mil 60.00mil 30.00mil 66.00mil 30.00mil "4" "A14" ""]
-	Pin[0.0000 400.00mil 60.00mil 30.00mil 66.00mil 30.00mil "5" "" ""]
+	Pin[0.0000 400.00mil 60.00mil 30.00mil 66.00mil 30.00mil "5" "CLK" ""]
 	Pin[0.0000 500.00mil 60.00mil 30.00mil 66.00mil 30.00mil "6" "D4" ""]
 	Pin[0.0000 600.00mil 60.00mil 30.00mil 66.00mil 30.00mil "7" "D3" ""]
 	Pin[0.0000 700.00mil 60.00mil 30.00mil 66.00mil 30.00mil "8" "D5" ""]
@@ -1594,7 +1594,7 @@ Layer(6 "bottom")
 	Line[2950.00mil 1350.00mil 2850.00mil 1350.00mil 40.00mil 20.00mil "clearline"]
 	Line[2950.00mil 1450.00mil 2850.00mil 1450.00mil 40.00mil 20.00mil "clearline"]
 	Line[2950.00mil 1550.00mil 2850.00mil 1550.00mil 40.00mil 20.00mil "clearline"]
-	Line[2900.00mil 1650.00mil 2850.00mil 1650.00mil 40.00mil 20.00mil "clearline"]
+	Line[2950.00mil 1650.00mil 2850.00mil 1650.00mil 40.00mil 20.00mil "clearline"]
 	Line[2950.00mil 1750.00mil 2850.00mil 1750.00mil 40.00mil 20.00mil "clearline"]
 	Line[2950.00mil 1850.00mil 2850.00mil 1850.00mil 40.00mil 20.00mil "clearline"]
 	Line[2750.00mil 1750.00mil 2650.00mil 1750.00mil 40.00mil 20.00mil "clearline"]
@@ -1671,11 +1671,15 @@ Layer(6 "bottom")
 	Line[1150.00mil 300.00mil 1400.00mil 300.00mil 40.00mil 20.00mil "clearline"]
 	Line[1400.00mil 300.00mil 1600.00mil 100.00mil 40.00mil 20.00mil "clearline"]
 	Line[2700.00mil 100.00mil 1600.00mil 100.00mil 40.00mil 20.00mil "clearline"]
+	Line[1000.00mil 850.00mil 1050.00mil 800.00mil 0.5000mm 20.00mil "clearline"]
+	Line[1050.00mil 800.00mil 2800.00mil 800.00mil 0.5000mm 20.00mil "clearline"]
+	Line[2800.00mil 800.00mil 2850.00mil 750.00mil 0.5000mm 20.00mil "clearline"]
+	Line[2850.00mil 750.00mil 2950.00mil 750.00mil 40.00mil 20.00mil "clearline"]
 )
 Layer(7 "outline")
 (
 	Line[0.0000 0.0000 3100.00mil 0.0000 0.5000mm 20.00mil "clearline"]
-	Line[3100.00mil 0.0000 3100.00mil 100.0001mm 0.5000mm 20.00mil "clearline"]
+	Line[3100.00mil 0.0000 3100.00mil 100.0001mm 0.5000mm 20.00mil "clearline,selected"]
 	Line[0.0000 99.9427mm 0.0000 0.0000 0.5000mm 20.00mil "clearline"]
 	Line[3100.00mil 100.0001mm 0.0000 100.0001mm 0.5000mm 20.00mil "clearline"]
 )
@@ -1799,6 +1803,7 @@ NetList()
 	)
 	Net("CLK" "(unknown)")
 	(
+		Connect("BUS-CLK")
 		Connect("Y0-CLK")
 		Connect("Z80-CLK")
 	)
