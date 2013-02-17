@@ -15,7 +15,6 @@
 #define LABEL_NEED_0    0x02
 #define LABEL_NEED_1    0x03
 #define LABEL_NEED_DIFF 0x10
-#define LABEL_NEED_COMP 0x20
 
 #define LABEL_TYPE_LABEL  0x00
 #define LABEL_TYPE_DEFINE 0x01
@@ -77,11 +76,20 @@ void add_label( const char* name, unsigned long value, int type );
  * \param type     How to insert the label. LABEL_NEED_10 for 16 bit highbyte
  *                 first, LABEL_NEED_01 for 16 bit lowbyte first, LABEL_NEED_0
  *                 for 8 bit lowbyte, LABEL_NEED_1 for 8 bit highbyte.
- *                 The flag LABEL_NEED_DIFF can be used if the difference is
- *                 required, the flag LABEL_NEED_COMP can be used if the two's
- *                 complement is required.
+ *                 The flag LABEL_NEED_DIFF can be used if the difference to
+ *                 the insertion position is required.
  */
 void require_label( const char* name, unsigned long position, int type );
+
+/**
+ * \brief Get the value of a define
+ *
+ * \param name  The name of the define
+ * \param value Returns the value of the define
+ *
+ * \return Non-zero if the define could be found, zero if not.
+ */
+int get_define( const char* name, unsigned long* value );
 
 /**
  * \brief Resolve labels in a binary file after assembly

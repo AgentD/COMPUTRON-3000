@@ -5,6 +5,7 @@
 typedef struct label_t
 {
     char* name;
+    unsigned int name_length;
     unsigned long position;
     int type;
 
@@ -20,6 +21,18 @@ static LABEL*        unknown_labels;
 
 
 
+static unsigned int label_length( const char* name )
+{
+    unsigned int i = 0;
+
+    while( isalnum( *(name++) ) )
+        ++i;
+
+    return i;
+}
+
+
+
 void set_base_address( unsigned long address )
 {
     base_address = address;
@@ -28,6 +41,9 @@ void set_base_address( unsigned long address )
 void add_label( const char* name, unsigned long value, int type )
 {
     LABEL* new_label;
+    unsigned int length;
+
+    length = label_length( name );
 
     /* allocate space for a new lable */
     new_label = malloc( sizeof(LABEL) );
@@ -36,7 +52,7 @@ void add_label( const char* name, unsigned long value, int type )
         return;             /* FIXME: handle error */
 
     /* allocate space for the label name */
-    new_label->name = malloc( strlen(name) + 1 );
+    new_label->name = malloc( length + 1 );
 
     if( !new_label->name )
     {
@@ -49,9 +65,12 @@ void add_label( const char* name, unsigned long value, int type )
         value += base_address;
 
     /* copy values */
-    strcpy( new_label->name, name );
-    new_label->position = value;
-    new_label->type     = type;
+    strncpy( new_label->name, name, length );
+    new_label->name[length] = '\0';
+
+    new_label->position    = value;
+    new_label->type        = type;
+    new_label->name_length = length;
 
     /* add the label to the list */
     new_label->next = known_labels;
@@ -61,6 +80,9 @@ void add_label( const char* name, unsigned long value, int type )
 void require_label( const char* name, unsigned long position, int type )
 {
     LABEL* new_label;
+    unsigned int length;
+
+    length = label_length( name );
 
     /* allocate space for a new lable */
     new_label = malloc( sizeof(LABEL) );
@@ -69,7 +91,7 @@ void require_label( const char* name, unsigned long position, int type )
         return;             /* FIXME: handle error */
 
     /* allocate space for the label name */
-    new_label->name = malloc( strlen(name) + 1 );
+    new_label->name = malloc( length + 1 );
 
     if( !new_label->name )
     {
@@ -78,13 +100,32 @@ void require_label( const char* name, unsigned long position, int type )
     }
 
     /* copy values */
-    strcpy( new_label->name, name );
+    strncpy( new_label->name, name, length );
+    new_label->name[ length ] = '\0';
+
     new_label->position = position;
     new_label->type = type;
 
     /* add the label to the list */
     new_label->next = unknown_labels;
     unknown_labels  = new_label;
+}
+
+int get_define( const char* name, unsigned long* value )
+{
+    LABEL* i;
+
+    for( i=known_labels; i; i=i->next )
+    {
+        if(  i->type == LABEL_TYPE_DEFINE &&
+            !strncmp( i->name, name, i->name_length ) )
+        {
+            *value = i->position;
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 void post_process_labels( FILE* file )
@@ -97,18 +138,21 @@ void post_process_labels( FILE* file )
     {
         for( j=known_labels; j; j=j->next )
         {
+            /* don't post process defines */
+            if( j->type == LABEL_TYPE_DEFINE )
+                continue;
+
+            /* check if we got the right one */
             if( strcmp( i->name, j->name ) )
                 continue;
 
+            /* insert the value */
             fseek( file, i->position, SEEK_SET );
 
             value = j->position;
 
             if( i->type & LABEL_NEED_DIFF )
                 value -= i->position;
-
-            if( i->type & LABEL_NEED_COMP )
-                value = ~value + 1;
 
             switch( i->type & ~(LABEL_NEED_DIFF) )
             {

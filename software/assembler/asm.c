@@ -128,7 +128,7 @@ int assemble_file( FILE* input, FILE* output )
         }
 
         /* handle assembler directives */
-        if( mnemonic == MK_4CC('[','O','R','G') )
+        if( mnemonic == MK_4CC('.','O','R','G') )
         {
             read_num( a0, &temp );
 
@@ -237,20 +237,28 @@ int read_num( const char* str, unsigned long* out )
 void imm8( const char* input, FILE* output )
 {
     unsigned long temp = 0;
-    int type = LABEL_NEED_0;
+    int type = LABEL_NEED_0, need_neg = 0;
 
     if( !read_num( input, &temp ) )
     {
         if( *input=='-' )
         {
             ++input;
-            type |= LABEL_NEED_COMP;
+            need_neg = 1;
         }
 
         if( *input=='+' )
             ++input;
 
-        require_label( input, ftell( output ), type );
+        /* try to get define value, require label on failure */
+        if( get_define( input, &temp ) )
+        {
+            temp = need_neg ? ((~temp) + 1) : temp;
+        }
+        else
+        {
+            require_label( input, ftell( output ), type );
+        }
     }
 
     fputc( temp & 0xFF, output );
@@ -259,7 +267,7 @@ void imm8( const char* input, FILE* output )
 void imm16( const char* input, FILE* output, int le )
 {
     unsigned long temp = 0;
-    int type;
+    int type, need_neg = 0;
 
     if( !read_num( input, &temp ) )
     {
@@ -268,13 +276,21 @@ void imm16( const char* input, FILE* output, int le )
         if( *input=='-' )
         {
             ++input;
-            type |= LABEL_NEED_COMP;
+            need_neg = 1;
         }
 
         if( *input=='+' )
             ++input;
-    
-        require_label( input, ftell( output ), type );
+
+        /* try to get define value, require label on failure */
+        if( get_define( input, &temp ) )
+        {
+            temp = need_neg ? ((~temp) + 1) : temp;
+        }
+        else
+        {
+            require_label( input, ftell( output ), type );
+        }
     }
 
     if( le )
