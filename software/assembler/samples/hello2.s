@@ -23,5 +23,5 @@ end:
     HLT
 
 string:
-    DB "Hello World\n\0"
+    .db "Hello World\n\0"
 

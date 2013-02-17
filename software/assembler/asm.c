@@ -134,7 +134,7 @@ int assemble_file( FILE* input, FILE* output )
 
             set_base_address( temp );
         }
-        else if( mnemonic == MK_4CC('D','B',0,0) )
+        else if( mnemonic == MK_4CC('.','D','B',0) )
         {
             int delta=0;
 
@@ -144,6 +144,36 @@ int assemble_file( FILE* input, FILE* output )
             {
                 for( i=1; a0[i] && a0[i]!='"'; i+=delta )
                     fputc( read_char( a0+i, &delta ), output );
+            }
+        }
+        else if( mnemonic == MK_4CC('.','B','L','K') )
+        {
+            unsigned long times;
+
+            read_num( a0, &times );
+            read_num( a1, &temp  );
+
+            temp &= 0xFF;
+
+            for( i=0; i<times; ++i )
+                fputc( temp, output );
+        }
+        else if( mnemonic == MK_4CC('.','L','O','C') )
+        {
+            unsigned long times, position;
+
+            read_num( a0, &times );
+            read_num( a1, &temp  );
+
+            temp &= 0xFF;
+            position = ftell( output );
+
+            if( times > position )
+            {
+                times -= position;
+
+                for( i=0; i<times; ++i )
+                    fputc( temp, output );
             }
         }
         else if( mnemonic == MK_4CC('.','D','E','F') )
