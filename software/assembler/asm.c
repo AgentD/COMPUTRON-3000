@@ -128,13 +128,13 @@ int assemble_file( FILE* input, FILE* output )
         }
 
         /* handle assembler directives */
-        if( mnemonic == MK_4CC('.','O','R','G') )
+        switch( mnemonic )
         {
+        case MK_4CC('.','O','R','G'):
             read_num( a0, &temp );
-
             set_base_address( temp );
-        }
-        else if( mnemonic == MK_4CC('.','D','B',0) )
+            break;
+        case MK_4CC('.','D','B',0):
         {
             int delta=0;
 
@@ -145,8 +145,9 @@ int assemble_file( FILE* input, FILE* output )
                 for( i=1; a0[i] && a0[i]!='"'; i+=delta )
                     fputc( read_char( a0+i, &delta ), output );
             }
+            break;
         }
-        else if( mnemonic == MK_4CC('.','B','L','K') )
+        case MK_4CC('.','B','L','K'):
         {
             unsigned long times;
 
@@ -157,8 +158,9 @@ int assemble_file( FILE* input, FILE* output )
 
             for( i=0; i<times; ++i )
                 fputc( temp, output );
+            break;
         }
-        else if( mnemonic == MK_4CC('.','L','O','C') )
+        case MK_4CC('.','L','O','C'):
         {
             unsigned long times, position;
 
@@ -175,9 +177,9 @@ int assemble_file( FILE* input, FILE* output )
                 for( i=0; i<times; ++i )
                     fputc( temp, output );
             }
+            break;
         }
-        else if( mnemonic == MK_4CC('.','D','E','F') )
-        {
+        case MK_4CC('.','D','E','F'):
             /* add null-terminator after definition name */
             for( i=0; a0[i] && !isspace( a0[i] ) && a0[i]!=','; ++i );
 
@@ -186,16 +188,18 @@ int assemble_file( FILE* input, FILE* output )
             /* add definition */
             read_num( a1, &temp );
             add_label( a0, temp, LABEL_TYPE_DEFINE );
-        }
-        else if( buffer[j]==':' )
-        {
-            buffer[j] = '\0';
-            add_label( buffer, ftell( output ), LABEL_TYPE_LABEL );
-        }
-        else
-        {
-            /* assemble line */
-            assemble_line_8080( mnemonic, a0, a1, output );
+            break;
+        default:
+            if( buffer[j]==':' )
+            {
+                buffer[j] = '\0';
+                add_label( buffer, ftell( output ), LABEL_TYPE_LABEL );
+            }
+            else
+            {
+                /* assemble line */
+                assemble_line_8080( mnemonic, a0, a1, output );
+            }
         }
     }
 
@@ -239,6 +243,8 @@ char read_char( const char* str, int* delta )
 
 int read_num( const char* str, unsigned long* out )
 {
+    int need_neg = 0;
+
     *out = 0;
 
     /* ASCII character literal */
@@ -248,47 +254,52 @@ int read_num( const char* str, unsigned long* out )
         return 1;
     }
 
-    /* integer literals ALWAYS start with a digit */
-    if( !isdigit( str[0] ) && str[0]!='+' && str[0]!='-' )
-        return 0;
+    /* skip sign */
+    if( str[0]=='-' )
+    {
+        need_neg = 1;
+        ++str;
+    }
+    else if( str[0]=='+' )
+    {
+        ++str;
+    }
 
-    if( (str[0]=='+' || str[0]=='-') && !isdigit( str[1] ) )
-        return 0;
+    /* if it starts with a digit, read it */
+    if( isdigit( str[0] ) )
+    {
+        /* binary literal (0b...) */
+        if( str[0]=='0' && str[1]=='b' )
+            *out = strtol( str+2, NULL, 2 );
+        else
+            *out = strtol( str, NULL, 0 );
 
-    /* binary literal (0b...) */
-    if( str[0]=='0' && str[1]=='b' )
-        *out = strtol( str+2, NULL, 2 );
-    else
-        *out = strtol( str, NULL, 0 );
+        if( need_neg )
+            *out = (~(*out)) + 1;
 
-    return 1;
+        return 1;
+    }
+
+    /* last chance. Try if it is a define */
+    if( get_define( str, out ) )
+    {
+        if( need_neg )
+            *out = (~(*out)) + 1;
+
+        return 1;
+    }
+
+    /* could not obtain value */
+    return 0;
 }
 
 void imm8( const char* input, FILE* output )
 {
     unsigned long temp = 0;
-    int type = LABEL_NEED_0, need_neg = 0;
 
     if( !read_num( input, &temp ) )
     {
-        if( *input=='-' )
-        {
-            ++input;
-            need_neg = 1;
-        }
-
-        if( *input=='+' )
-            ++input;
-
-        /* try to get define value, require label on failure */
-        if( get_define( input, &temp ) )
-        {
-            temp = need_neg ? ((~temp) + 1) : temp;
-        }
-        else
-        {
-            require_label( input, ftell( output ), type );
-        }
+        require_label( input, ftell( output ), LABEL_NEED_0 );
     }
 
     fputc( temp & 0xFF, output );
@@ -297,30 +308,11 @@ void imm8( const char* input, FILE* output )
 void imm16( const char* input, FILE* output, int le )
 {
     unsigned long temp = 0;
-    int type, need_neg = 0;
 
     if( !read_num( input, &temp ) )
     {
-        type = le ? LABEL_NEED_01 : LABEL_NEED_10;
-
-        if( *input=='-' )
-        {
-            ++input;
-            need_neg = 1;
-        }
-
-        if( *input=='+' )
-            ++input;
-
-        /* try to get define value, require label on failure */
-        if( get_define( input, &temp ) )
-        {
-            temp = need_neg ? ((~temp) + 1) : temp;
-        }
-        else
-        {
-            require_label( input, ftell( output ), type );
-        }
+        require_label( input, ftell( output ), le ? LABEL_NEED_01 :
+                                                    LABEL_NEED_10 );
     }
 
     if( le )
