@@ -152,9 +152,22 @@ void post_process_labels( FILE* file )
             value = j->position;
 
             if( i->type & LABEL_NEED_DIFF )
+            {
+                i->type &= ~LABEL_NEED_DIFF;
                 value -= i->position;
 
-            switch( i->type & ~(LABEL_NEED_DIFF) )
+                if( i->type==LABEL_NEED_10 ||
+                    i->type==LABEL_NEED_01 )
+                {
+                    value -= 2;
+                }
+                else
+                {
+                    value -= 1;
+                }
+            }
+
+            switch( i->type )
             {
             case LABEL_NEED_10:
                 fputc( value>>8 & 0xFF, file );

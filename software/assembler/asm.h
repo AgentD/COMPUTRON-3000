@@ -21,6 +21,20 @@
 
 
 
+
+typedef void (* assemble_line_fun )( unsigned long, const char*,
+                                     const char*, FILE* );
+
+
+
+void assemble_line_8080( unsigned long mnemonic, const char* a0,
+                         const char* a1, FILE* out );
+
+void assemble_line_z80( unsigned long mnemonic, const char* a0,
+                        const char* a1, FILE* out );
+
+
+
 /**
  * \brief Assemble a file
  *
@@ -31,7 +45,7 @@
  *
  * \return Non-zero on success, zero if there was an error.
  */
-int assemble_file( FILE* input, FILE* output );
+int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun );
 
 
 /**
@@ -115,8 +129,7 @@ void reset_labels( void );
  * This functions is defined in asm.c
  *
  * If the given string can not be converted to a numeric value,
- * it is issued as a required label, where a possible sign is skipped
- * and a complement flag set, if negative sign is given.
+ * it is issued as a required label.
  *
  * \param input  The input string to convert into an 8 bit value
  * \param output The output binary file
@@ -124,13 +137,25 @@ void reset_labels( void );
 void imm8( const char* input, FILE* output );
 
 /**
+ * \brief Embedd an 8 bit immediate difference value into a binary file
+ *
+ * This functions is defined in asm.c
+ *
+ * If the given string can not be converted to a numeric value,
+ * it is issued as a required label of type LABEL_NEED_DIFF.
+ *
+ * \param input  The input string to convert into an 8 bit value
+ * \param output The output binary file
+ */
+void diff8( const char* input, FILE* output );
+
+/**
  * \brief Embedd a 16 bit immediate value into a binary file
  *
  * This functions is defined in asm.c
  *
  * If the given string can not be converted to a numeric value,
- * it is issued as a required label, where a possible sign is skipped
- * and a complement flag set, if negative sign is given.
+ * it is issued as a required label.
  *
  * \param input  The input string to convert into a 16 bit value.
  * \param output The output binary file.
@@ -174,9 +199,6 @@ char read_char( const char* str, int* delta );
  *         invalid)
  */
 int read_num( const char* str, unsigned long* out );
-
-void assemble_line_8080( unsigned long mnemonic, const char* a0,
-                         const char* a1, FILE* out );
 
 #endif /* ASSEMBLER_COMMON_H */
 

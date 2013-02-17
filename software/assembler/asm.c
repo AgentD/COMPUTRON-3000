@@ -8,6 +8,7 @@ int main( int argc, char** argv )
     char out_name[ 128 ];
     char* dot;
     int i;
+    assemble_line_fun asm_fun = NULL;
 
     if( argc==1 )
     {
@@ -19,6 +20,25 @@ int main( int argc, char** argv )
 
     for( i=1; i<argc; ++i )
     {
+        if( !strcmp( argv[i], "-mz80" ) )
+        {
+            asm_fun = assemble_line_z80;
+            continue;
+        }
+
+        if( !strcmp( argv[i], "-mi8080" ) )
+        {
+            asm_fun = assemble_line_8080;
+            continue;
+        }
+
+        /******** assemble a file ********/
+        if( !asm_fun )
+        {
+            printf( "Error: No architecture specified!\n" );
+            return EXIT_FAILURE;
+        }
+
         /* generate filename for the output binary */
         strncpy( out_name, argv[i], sizeof(out_name) );
 
@@ -48,7 +68,7 @@ int main( int argc, char** argv )
         }
 
         /* do the assembly */
-        if( !assemble_file( input, output ) )
+        if( !assemble_file( input, output, asm_fun ) )
         {
             fclose( input );
             fclose( output );
@@ -65,7 +85,7 @@ int main( int argc, char** argv )
 }
 
 /***************************************************************************/
-int assemble_file( FILE* input, FILE* output )
+int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
 {
     char buffer[ 128 ];
     unsigned int i, j;
@@ -197,8 +217,7 @@ int assemble_file( FILE* input, FILE* output )
             }
             else
             {
-                /* assemble line */
-                assemble_line_8080( mnemonic, a0, a1, output );
+                asm_fun( mnemonic, a0, a1, output );
             }
         }
     }
@@ -300,6 +319,18 @@ void imm8( const char* input, FILE* output )
     if( !read_num( input, &temp ) )
     {
         require_label( input, ftell( output ), LABEL_NEED_0 );
+    }
+
+    fputc( temp & 0xFF, output );
+}
+
+void diff8( const char* input, FILE* output )
+{
+    unsigned long temp = 0;
+
+    if( !read_num( input, &temp ) )
+    {
+        require_label( input, ftell( output ), LABEL_NEED_DIFF|LABEL_NEED_0 );
     }
 
     fputc( temp & 0xFF, output );
