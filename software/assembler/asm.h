@@ -10,14 +10,16 @@
 
 #define MK_4CC( a, b, c, d ) (((a)<<24) | ((b)<<16) | ((c)<<8) | (d))
 
-#define LABEL_NEED_10   0x00
-#define LABEL_NEED_01   0x01
-#define LABEL_NEED_0    0x02
-#define LABEL_NEED_1    0x03
-#define LABEL_NEED_DIFF 0x10
+#define LABEL_NEED_10     0x00
+#define LABEL_NEED_01     0x01
+#define LABEL_NEED_0      0x02
+#define LABEL_NEED_1      0x03
+#define LABEL_NEED_DIFF   0x04
 
+#define LABEL_FLAG_EXPORT 0x10
+
+#define LABEL_TYPE_DEFINE 0x20
 #define LABEL_TYPE_LABEL  0x00
-#define LABEL_TYPE_DEFINE 0x01
 
 
 

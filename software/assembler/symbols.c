@@ -24,8 +24,11 @@ static unsigned int label_length( const char* name )
 {
     unsigned int i = 0;
 
-    while( isalnum( *(name++) ) )
+    while( isalnum( *name ) || *name=='_' )
+    {
         ++i;
+        ++name;
+    }
 
     return i;
 }
@@ -37,14 +40,14 @@ static int label_cmp( const char* a, const char* b )
 
     for( ; *a && *b; ++a, ++b )
     {
-        if( !isalnum( *a ) ) return -1;
-        if( !isalnum( *b ) ) return 1;
+        if( !isalnum( *a ) && *a!='_' ) return -1;
+        if( !isalnum( *b ) && *b!='_' ) return 1;
 
         if( *a < *b ) return -1;
         if( *a > *b ) return 1;
     }
 
-    return 0;
+    return *a < *b ? -1 : (*a > *b ? 1 : 0);
 }
 
 void write_label( unsigned long position, unsigned long value,
@@ -61,7 +64,7 @@ void write_label( unsigned long position, unsigned long value,
             value -= 1;
     }
 
-    switch( type )
+    switch( type & 0x0F )
     {
     case LABEL_NEED_10: fputc( (value>>8) & 0xFF, out );
     case LABEL_NEED_0:  fputc(  value     & 0xFF, out ); break;
@@ -160,7 +163,7 @@ void require_label( const char* name, FILE* output, int type )
     /* try to find the label */
     for( i=known_labels; i; i=i->next )
     {
-        if( !label_cmp( i->name, name ) )
+        if( !(i->type&LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
         {
             write_label( ftell( output ), i->position, type, output );
             return;
@@ -216,7 +219,7 @@ int get_define( const char* name, unsigned long* value )
 
     for( i=known_labels; i; i=i->next )
     {
-        if( i->type==LABEL_TYPE_DEFINE && !label_cmp( i->name, name ) )
+        if( (i->type&LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
         {
             *value = i->position;
             return 1;
