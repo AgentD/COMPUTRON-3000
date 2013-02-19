@@ -15,10 +15,9 @@ LABEL;
 
 
 
-static unsigned long base_address;
-static LABEL*        known_labels;
-static LABEL*        unknown_labels;
-static LABEL*        resolved_labels;
+static LABEL* known_labels;
+static LABEL* unknown_labels;
+static LABEL* resolved_labels;
 
 
 #define FREE_NODE( node ) free( (node)->name ); free( node )
@@ -63,8 +62,6 @@ void write_label( unsigned long position, unsigned long value,
         else
             value -= 1;
     }
-    else
-        value += base_address;
 
     switch( type & 0x0F )
     {
@@ -131,11 +128,6 @@ LABEL* find_in_list( LABEL* list, const char* name )
 }
 
 /****************************************************************************/
-
-void set_base_address( unsigned long address )
-{
-    base_address = address;
-}
 
 void add_label( const char* name, unsigned long value, int type,
                 FILE* output )
@@ -246,6 +238,61 @@ void reset_labels( void )
     resolved_labels = NULL;
     known_labels    = NULL;
     unknown_labels  = NULL;
-    base_address    = 0;
+}
+
+unsigned int write_unresolved_smbols( FILE* out )
+{
+    LABEL* i;
+    unsigned int count = 0;
+
+    for( i=unknown_labels; i; i=i->next, ++count )
+    {
+        fputc(  i->position     & 0xFF, out );
+        fputc( (i->position>>8) & 0xFF, out );
+        fputc(  i->type         & 0xFF, out );
+        fputs(  i->name,                out );
+        fputc( '\0',                    out );
+    }
+
+    return count;
+}
+
+unsigned int write_export_symbols( FILE* out )
+{
+    LABEL* i;
+    unsigned int count = 0;
+
+    for( i=known_labels; i; i=i->next )
+    {
+        if( i->type & LABEL_FLAG_EXPORT )
+        {
+            fputc(  i->position     & 0xFF, out );
+            fputc( (i->position>>8) & 0xFF, out );
+            fputs(  i->name,                out );
+            fputc( '\0',                    out );
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+unsigned int write_relocation_table( FILE* out )
+{
+    LABEL *i, *j;
+    unsigned int count = 0;
+
+    for( i=resolved_labels; i; i=i->next, ++count )
+    {
+        j = find_in_list( known_labels, i->name );
+
+        fputc(  i->position     & 0xFF, out );
+        fputc( (i->position>>8) & 0xFF, out );
+        fputc(  j->position     & 0xFF, out );
+        fputc( (j->position>>8) & 0xFF, out );
+        fputc(  i->type         & 0xFF, out );
+    }
+
+    return count;
 }
 

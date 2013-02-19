@@ -16,8 +16,6 @@ int main( int argc, char** argv )
         return EXIT_FAILURE;
     }
 
-    reset_labels( );
-
     for( i=1; i<argc; ++i )
     {
         if( !strcmp( argv[i], "-mz80" ) )
@@ -47,7 +45,7 @@ int main( int argc, char** argv )
         if( dot )
             *dot = '\0';
 
-        strcat( out_name, ".bin" );
+        strcat( out_name, ".o" );
 
         /* open input and output files */
         input = fopen( argv[i], "r" );
@@ -78,7 +76,6 @@ int main( int argc, char** argv )
         /* cleanup */
         fclose( input );
         fclose( output );
-        reset_labels( );
     }
 
     return EXIT_SUCCESS;
@@ -88,8 +85,9 @@ int main( int argc, char** argv )
 int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
 {
     char buffer[ 128 ];
-    unsigned int i, j;
-    unsigned long mnemonic, temp;
+    unsigned int i, j, num_imp, num_reloc, num_exp;
+    unsigned long mnemonic, temp, base_address;
+    unsigned long imp_start, exp_start, reloc_start;
     char *a0, *a1;
     int is_quote = 0;
 
@@ -151,8 +149,7 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
         switch( mnemonic )
         {
         case MK_4CC('.','O','R','G'):
-            read_num( a0, &temp );
-            set_base_address( temp );
+            read_num( a0, &base_address );
             break;
         case MK_4CC('.','D','B',0):
         {
@@ -214,6 +211,32 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
                 asm_fun( mnemonic, a0, a1, output );
         }
     }
+
+    /* generate symbol tables and cleanup the symbol lists */
+    imp_start   = ftell( output );
+    num_imp     = write_unresolved_smbols( output );
+    exp_start   = ftell( output );
+    num_exp     = write_export_symbols( output );
+    reloc_start = ftell( output );
+    num_reloc   = write_relocation_table( output );
+
+    reset_labels( );
+
+    /* generate footer */
+    fputc(  base_address     & 0xFF, output );
+    fputc( (base_address>>8) & 0xFF, output );
+    fputc(  imp_start        & 0xFF, output );
+    fputc( (imp_start>>8)    & 0xFF, output );
+    fputc(  exp_start        & 0xFF, output );
+    fputc( (exp_start>>8)    & 0xFF, output );
+    fputc(  reloc_start      & 0xFF, output );
+    fputc( (reloc_start>>8)  & 0xFF, output );
+    fputc(  num_imp          & 0xFF, output );
+    fputc( (num_imp>>8)      & 0xFF, output );
+    fputc(  num_exp          & 0xFF, output );
+    fputc( (num_exp>>8)      & 0xFF, output );
+    fputc(  num_reloc        & 0xFF, output );
+    fputc( (num_reloc>>8)    & 0xFF, output );
 
     return 1;
 }

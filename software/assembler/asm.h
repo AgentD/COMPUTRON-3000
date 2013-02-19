@@ -54,21 +54,6 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun );
 
 
 /**
- * \brief Set the base address of the program currently being assembled
- *
- * This functions is defined in symbols.c
- *
- * This function can be called multiple times, it will alter the addresses
- * of all labels defined afterwards.
- *
- * The function is called within assemble_file if a [ORG xxxx] directive is
- * discovered.
- *
- * \param address The new base address
- */
-void set_base_address( unsigned long address );
-
-/**
  * \brief Add a label or definition
  *
  * This functions is defined in symbols.c
@@ -120,6 +105,12 @@ int get_define( const char* name, unsigned long* value );
  * This functions is defined in symbols.c
  */
 void reset_labels( void );
+
+unsigned int write_unresolved_smbols( FILE* out );
+
+unsigned int write_export_symbols( FILE* out );
+
+unsigned int write_relocation_table( FILE* out );
 
 
 
