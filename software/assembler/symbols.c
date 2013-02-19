@@ -9,6 +9,7 @@ typedef struct label_t
     int type;
 
     struct label_t* next;
+    struct label_t* prev;
 }
 LABEL;
 
@@ -19,6 +20,10 @@ static LABEL*        known_labels;
 static LABEL*        unknown_labels;
 static LABEL*        resolved_labels;
 
+
+#define FREE_NODE( node ) free( (node)->name ); free( node )
+#define ADD_TO_LIST( list, node ) (node)->prev=NULL; (node)->next=list;\
+                                  if( list ) { (list)->prev=node; } (list)=(node)
 
 
 static unsigned int label_length( const char* name )
@@ -58,6 +63,8 @@ void write_label( unsigned long position, unsigned long value,
         else
             value -= 1;
     }
+    else
+        value += base_address;
 
     switch( type & 0x0F )
     {
@@ -66,6 +73,61 @@ void write_label( unsigned long position, unsigned long value,
     case LABEL_NEED_01: fputc(  value     & 0xFF, out );
     case LABEL_NEED_1:  fputc( (value>>8) & 0xFF, out ); break;
     }
+}
+
+LABEL* create_label( const char* name, unsigned long value, int type )
+{
+    LABEL* l;
+    unsigned int length = label_length( name );
+
+    /* allocate space for a new lable */
+    l = malloc( sizeof(LABEL) );
+
+    if( !l )
+        return NULL;
+
+    /* allocate space for the label name */
+    l->name = malloc( length + 1 );
+
+    if( !l->name )
+    {
+        free( l );
+        return NULL;
+    }
+
+    /* copy values */
+    strncpy( l->name, name, length );
+    l->name[ length ] = '\0';
+
+    l->position = value;
+    l->type     = type;
+
+    return l;
+}
+
+void free_list( LABEL* list )
+{
+    LABEL *i, *old;
+
+    for( i=list; i; )
+    {
+        old = i;
+        i = i->next;
+        FREE_NODE( old );
+    }
+}
+
+LABEL* find_in_list( LABEL* list, const char* name )
+{
+    LABEL* i;
+
+    for( i=list; i; i=i->next )
+    {
+        if( !label_cmp( i->name, name ) )
+            return i;
+    }
+
+    return NULL;
 }
 
 /****************************************************************************/
@@ -78,142 +140,78 @@ void set_base_address( unsigned long address )
 void add_label( const char* name, unsigned long value, int type,
                 FILE* output )
 {
-    LABEL *new_label, *i, *prev, *old;
-    unsigned int length;
+    LABEL *new_label, *i, *old;
 
-    while( isspace( *name ) )
-        ++name;
+    SKIP_SPACE( name );
 
     /* try to find references to the label */
     if( !(type & LABEL_TYPE_DEFINE) )
     {
-        value += base_address;  /* adjust offset */
-
-        for( i=unknown_labels; i; )
+        for( i=unknown_labels; (i=find_in_list( i, name )); )
         {
-            if( !label_cmp( i->name, name ) )
+            fseek( output, i->position, SEEK_SET );
+            write_label( i->position, value, i->type, output );
+
+            /* move to resolved list and advance */
+            if( i==unknown_labels ) unknown_labels = i->next;
+            if( i->next           ) i->next->prev  = i->prev;
+            if( i->prev           ) i->prev->next  = i->next;
+
+            old = i;
+            i = i->next;
+
+            if( old->type & LABEL_NEED_DIFF )
             {
-                fseek( output, i->position, SEEK_SET );
-                write_label( i->position, value, i->type, output );
-
-                /* move to resolved list and advance */
-                if( i==unknown_labels )
-                    unknown_labels = unknown_labels->next;
-                else
-                    prev->next = prev->next->next;
-
-                old = i;
-                i = i->next;
-
-                if( old->type & LABEL_NEED_DIFF )
-                {
-                    free( old->name );
-                    free( old );
-                }
-                else
-                {
-                    old->next = resolved_labels;
-                    resolved_labels = old;
-                }
+                FREE_NODE( old );
             }
             else
             {
-                /* advance */
-                prev = i;
-                i = i->next;
+                ADD_TO_LIST( resolved_labels, old );
             }
         }
 
         fseek( output, 0, SEEK_END );
     }
 
-    /* allocate space for a new lable */
-    new_label = malloc( sizeof(LABEL) );
+    /* create a new label */
+    new_label = create_label( name, value, type );
 
     if( !new_label )
         return;             /* FIXME: handle error */
 
-    /* allocate space for the label name */
-    length = label_length( name );
-
-    new_label->name = malloc( length + 1 );
-
-    if( !new_label->name )
-    {
-        free( new_label );
-        return;             /* FIXME: handle error */
-    }
-
-    /* copy values */
-    strncpy( new_label->name, name, length );
-    new_label->name[length] = '\0';
-
-    new_label->position    = value;
-    new_label->type        = type;
-
-    /* add the label to the list */
-    new_label->next = known_labels;
-    known_labels    = new_label;
+    ADD_TO_LIST( known_labels, new_label );
 }
 
 void require_label( const char* name, FILE* output, int type )
 {
     LABEL *new_label, *i;
-    unsigned int length, resolved = 0;
     unsigned long position = ftell( output );
 
-    while( isspace( *name ) )
-        ++name;
+    SKIP_SPACE( name );
 
     /* try to find the label */
-    for( i=known_labels; i; i=i->next )
+    if( (i = find_in_list( known_labels, name )) )
     {
-        if( !(i->type & LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
-        {
-            write_label( position, i->position, type, output );
+        write_label( position, i->position, type, output );
 
-            if( type & LABEL_NEED_DIFF )
-                return;
-
-            resolved = 1;
-            break;
-        }
+        if( type & LABEL_NEED_DIFF )
+            return;
     }
 
-    /* allocate space for a new lable */
-    new_label = malloc( sizeof(LABEL) );
+    /* create a new label */
+    new_label = create_label( name, position, type );
 
     if( !new_label )
         return;             /* FIXME: handle error */
 
-    /* allocate space for the label name */
-    length = label_length( name );
-
-    new_label->name = malloc( length + 1 );
-
-    if( !new_label->name )
-    {
-        free( new_label );
-        return;             /* FIXME: handle error */
-    }
-
-    /* copy values */
-    strncpy( new_label->name, name, length );
-    new_label->name[ length ] = '\0';
-
-    new_label->position = position;
-    new_label->type     = type;
-
     /* add the label to the correct list */
-    if( resolved )
+    if( i )
     {
-        new_label->next = resolved_labels;
-        resolved_labels = new_label;
+        ADD_TO_LIST( resolved_labels, new_label );
     }
     else
     {
-        new_label->next = unknown_labels;
-        unknown_labels  = new_label;
+        ADD_TO_LIST( unknown_labels, new_label );
 
         /* write fill data */
         type &= (~LABEL_NEED_DIFF) & 0x0F;
@@ -229,49 +227,21 @@ int get_define( const char* name, unsigned long* value )
 {
     LABEL* i;
 
-    while( isspace( *name ) )
-        ++name;
+    SKIP_SPACE( name );
 
-    for( i=known_labels; i; i=i->next )
-    {
-        if( (i->type & LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
-        {
-            *value = i->position;
-            return 1;
-        }
-    }
+    if( !(i = find_in_list( known_labels, name )) ||
+        !(i->type & LABEL_TYPE_DEFINE) )
+        return 0;
 
-    return 0;
+    *value = i->position;
+    return 1;
 }
 
 void reset_labels( void )
 {
-    LABEL* i;
-    LABEL* old;
-
-    for( i=unknown_labels; i; )
-    {
-        old = i;
-        i = i->next;
-        free( old->name );
-        free( old );
-    }
-
-    for( i=known_labels; i; )
-    {
-        old = i;
-        i = i->next;
-        free( old->name );
-        free( old );
-    }
-
-    for( i=resolved_labels; i; )
-    {
-        old = i;
-        i = i->next;
-        free( old->name );
-        free( old );
-    }
+    free_list( unknown_labels );
+    free_list( known_labels );
+    free_list( resolved_labels );
 
     resolved_labels = NULL;
     known_labels    = NULL;

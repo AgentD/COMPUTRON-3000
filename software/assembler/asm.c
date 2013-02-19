@@ -133,18 +133,18 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
         /* get arguments */
         a0 = buffer + i;
 
-        while( !isspace( *a0 ) && (*a0) ) ++a0;
-        while(  isspace( *a0 ) && (*a0) ) ++a0;
+        FIND_SPACE( a0 );
+        SKIP_SPACE( a0 );
 
         a1 = a0;
 
-        while( !isspace( *a1 ) && (*a1) ) ++a1;
-        while(  isspace( *a1 ) && (*a1) ) ++a1;
+        FIND_SPACE( a1 );
+        SKIP_SPACE( a1 );
 
         if( *a1 == ',' )
         {
             ++a1;
-            while( isspace( *a1 ) && (*a1) ) ++a1;
+            SKIP_SPACE( a1 );
         }
 
         /* handle assembler directives */

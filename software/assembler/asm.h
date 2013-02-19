@@ -8,6 +8,9 @@
 
 
 
+#define SKIP_SPACE( str ) while(  isspace( *(str) )           ) ++(str)
+#define FIND_SPACE( str ) while( !isspace( *(str) ) && (*str) ) ++(str)
+
 #define MK_4CC( a, b, c, d ) (((a)<<24) | ((b)<<16) | ((c)<<8) | (d))
 
 #define LABEL_NEED_10     0x00
