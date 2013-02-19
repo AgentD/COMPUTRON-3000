@@ -17,6 +17,7 @@ LABEL;
 static unsigned long base_address;
 static LABEL*        known_labels;
 static LABEL*        unknown_labels;
+static LABEL*        resolved_labels;
 
 
 
@@ -35,19 +36,13 @@ static unsigned int label_length( const char* name )
 
 static int label_cmp( const char* a, const char* b )
 {
-    while( isspace( *a ) ) ++a;
-    while( isspace( *b ) ) ++b;
+    unsigned int alen = label_length( a );
+    unsigned int blen = label_length( b );
 
-    for( ; *a && *b; ++a, ++b )
-    {
-        if( !isalnum( *a ) && *a!='_' ) return -1;
-        if( !isalnum( *b ) && *b!='_' ) return 1;
+    if( alen < blen ) return -1;
+    if( alen > blen ) return  1;
 
-        if( *a < *b ) return -1;
-        if( *a > *b ) return 1;
-    }
-
-    return *a < *b ? -1 : (*a > *b ? 1 : 0);
+    return strncmp( a, b, alen );
 }
 
 void write_label( unsigned long position, unsigned long value,
@@ -86,37 +81,51 @@ void add_label( const char* name, unsigned long value, int type,
     LABEL *new_label, *i, *prev, *old;
     unsigned int length;
 
-    while( *name && isspace( *name ) )
+    while( isspace( *name ) )
         ++name;
 
     /* try to find references to the label */
-    for( i=unknown_labels; i; )
+    if( !(type & LABEL_TYPE_DEFINE) )
     {
-        if( !label_cmp( i->name, name ) )
-        {
-            fseek( output, i->position, SEEK_SET );
-            write_label( i->position, value, i->type, output );
+        value += base_address;  /* adjust offset */
 
-            /* remove from list and advance */
-            if( i==unknown_labels )
-                unknown_labels = unknown_labels->next;
+        for( i=unknown_labels; i; )
+        {
+            if( !label_cmp( i->name, name ) )
+            {
+                fseek( output, i->position, SEEK_SET );
+                write_label( i->position, value, i->type, output );
+
+                /* move to resolved list and advance */
+                if( i==unknown_labels )
+                    unknown_labels = unknown_labels->next;
+                else
+                    prev->next = prev->next->next;
+
+                old = i;
+                i = i->next;
+
+                if( old->type & LABEL_NEED_DIFF )
+                {
+                    free( old->name );
+                    free( old );
+                }
+                else
+                {
+                    old->next = resolved_labels;
+                    resolved_labels = old;
+                }
+            }
             else
-                prev->next = prev->next->next;
+            {
+                /* advance */
+                prev = i;
+                i = i->next;
+            }
+        }
 
-            old = i;
-            i = i->next;
-            free( old->name );
-            free( old );
-        }
-        else
-        {
-            /* advance */
-            prev = i;
-            i = i->next;
-        }
+        fseek( output, 0, SEEK_END );
     }
-
-    fseek( output, 0, SEEK_END );
 
     /* allocate space for a new lable */
     new_label = malloc( sizeof(LABEL) );
@@ -125,7 +134,7 @@ void add_label( const char* name, unsigned long value, int type,
         return;             /* FIXME: handle error */
 
     /* allocate space for the label name */
-    length = strlen( name );
+    length = label_length( name );
 
     new_label->name = malloc( length + 1 );
 
@@ -134,10 +143,6 @@ void add_label( const char* name, unsigned long value, int type,
         free( new_label );
         return;             /* FIXME: handle error */
     }
-
-    /* adjust offset if required */
-    if( type==LABEL_TYPE_LABEL )
-        value += base_address;
 
     /* copy values */
     strncpy( new_label->name, name, length );
@@ -153,9 +158,9 @@ void add_label( const char* name, unsigned long value, int type,
 
 void require_label( const char* name, FILE* output, int type )
 {
-    LABEL* new_label;
-    LABEL* i;
-    unsigned int length;
+    LABEL *new_label, *i;
+    unsigned int length, resolved = 0;
+    unsigned long position = ftell( output );
 
     while( isspace( *name ) )
         ++name;
@@ -163,10 +168,15 @@ void require_label( const char* name, FILE* output, int type )
     /* try to find the label */
     for( i=known_labels; i; i=i->next )
     {
-        if( !(i->type&LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
+        if( !(i->type & LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
         {
-            write_label( ftell( output ), i->position, type, output );
-            return;
+            write_label( position, i->position, type, output );
+
+            if( type & LABEL_NEED_DIFF )
+                return;
+
+            resolved = 1;
+            break;
         }
     }
 
@@ -191,20 +201,28 @@ void require_label( const char* name, FILE* output, int type )
     strncpy( new_label->name, name, length );
     new_label->name[ length ] = '\0';
 
-    new_label->position = ftell( output );
+    new_label->position = position;
     new_label->type     = type;
 
-    /* add the label to the list */
-    new_label->next = unknown_labels;
-    unknown_labels  = new_label;
+    /* add the label to the correct list */
+    if( resolved )
+    {
+        new_label->next = resolved_labels;
+        resolved_labels = new_label;
+    }
+    else
+    {
+        new_label->next = unknown_labels;
+        unknown_labels  = new_label;
 
-    /* write fill data */
-    type &= ~LABEL_NEED_DIFF;
+        /* write fill data */
+        type &= (~LABEL_NEED_DIFF) & 0x0F;
 
-    if( type==LABEL_NEED_10 || type==LABEL_NEED_01 )
+        if( type==LABEL_NEED_10 || type==LABEL_NEED_01 )
+            fputc( 0x00, output );
+
         fputc( 0x00, output );
-
-    fputc( 0x00, output );
+    }
 }
 
 int get_define( const char* name, unsigned long* value )
@@ -214,12 +232,9 @@ int get_define( const char* name, unsigned long* value )
     while( isspace( *name ) )
         ++name;
 
-    if( !isalnum( *name ) )
-        return 0;
-
     for( i=known_labels; i; i=i->next )
     {
-        if( (i->type&LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
+        if( (i->type & LABEL_TYPE_DEFINE) && !label_cmp( i->name, name ) )
         {
             *value = i->position;
             return 1;
@@ -233,8 +248,6 @@ void reset_labels( void )
 {
     LABEL* i;
     LABEL* old;
-
-    base_address = 0;
 
     for( i=unknown_labels; i; )
     {
@@ -251,5 +264,18 @@ void reset_labels( void )
         free( old->name );
         free( old );
     }
+
+    for( i=resolved_labels; i; )
+    {
+        old = i;
+        i = i->next;
+        free( old->name );
+        free( old );
+    }
+
+    resolved_labels = NULL;
+    known_labels    = NULL;
+    unknown_labels  = NULL;
+    base_address    = 0;
 }
 

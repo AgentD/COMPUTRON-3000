@@ -204,18 +204,12 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
             add_label( a0, temp, LABEL_TYPE_DEFINE, output );
             break;
         case MK_4CC('.','E','X','P'):
-            if( buffer[j]==':' )
-                buffer[j] = '\0';
-
             add_label( a0, ftell(output), LABEL_TYPE_LABEL|LABEL_FLAG_EXPORT,
                        output );
             break;
         default:
             if( buffer[j]==':' )
-            {
-                buffer[j] = '\0';
                 add_label( buffer, ftell(output), LABEL_TYPE_LABEL, output );
-            }
             else
                 asm_fun( mnemonic, a0, a1, output );
         }
