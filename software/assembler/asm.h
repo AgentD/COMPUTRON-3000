@@ -71,29 +71,33 @@ void set_base_address( unsigned long address );
  * This function is called within assemble_file if a label definition or a
  * .def directive is discovered.
  *
- * \param name  The name of the label.
- * \param value The value of the label (e.g. position in the output file or
- *              value of the define).
- * \param type  LABEL_TYPE_LABEL for ordinary labels or LABEL_TYPE_DEFINE for
- *              definitions.
+ * \param name   The name of the label.
+ * \param value  The value of the label (e.g. position in the output file or
+ *               value of the define).
+ * \param type   LABEL_TYPE_LABEL for ordinary labels or LABEL_TYPE_DEFINE for
+ *               definitions.
+ * \param output The binary output file. All unresolved references to the new
+ *               label are resolved.
  */
-void add_label( const char* name, unsigned long value, int type );
+void add_label( const char* name, unsigned long value, int type,
+                FILE* output );
 
 /**
  * \brief Require a label
  *
  * This functions is defined in symbols.c
  *
- * \param name     The name of the required label.
- * \param position The position of the in the binary file where the label
- *                 value is required.
- * \param type     How to insert the label. LABEL_NEED_10 for 16 bit highbyte
- *                 first, LABEL_NEED_01 for 16 bit lowbyte first, LABEL_NEED_0
- *                 for 8 bit lowbyte, LABEL_NEED_1 for 8 bit highbyte.
- *                 The flag LABEL_NEED_DIFF can be used if the difference to
- *                 the insertion position is required.
+ * \param name   The name of the required label.
+ * \param output The output binary file. The label value is written if found,
+ *               or the current position is stored for later insertion and a
+ *               fill value is written.
+ * \param type   How to insert the label. LABEL_NEED_10 for 16 bit highbyte
+ *               first, LABEL_NEED_01 for 16 bit lowbyte first, LABEL_NEED_0
+ *               for 8 bit lowbyte, LABEL_NEED_1 for 8 bit highbyte.
+ *               The flag LABEL_NEED_DIFF can be used if the difference to
+ *               the insertion position is required.
  */
-void require_label( const char* name, unsigned long position, int type );
+void require_label( const char* name, FILE* output, int type );
 
 /**
  * \brief Get the value of a define
@@ -104,15 +108,6 @@ void require_label( const char* name, unsigned long position, int type );
  * \return Non-zero if the define could be found, zero if not.
  */
 int get_define( const char* name, unsigned long* value );
-
-/**
- * \brief Resolve labels in a binary file after assembly
- *
- * This functions is defined in symbols.c
- *
- * \param file The binary file to post process
- */
-void post_process_labels( FILE* file );
 
 /**
  * \brief Reset all internal state of the label handling code.

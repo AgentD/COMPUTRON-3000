@@ -347,6 +347,7 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
     case MK_4CC('L','D','I','R'): inst( 0xEDB0, out ); break;
     case MK_4CC('L','D','D',0):   inst( 0xEDA8, out ); break;
     case MK_4CC('L','D','D','R'): inst( 0xEDB8, out ); break;
+    case MK_4CC('D','J','N','Z'): inst( 0x10,   out ); diff8(a0, out); break;
 
     case MK_4CC('S','U','B',0): alu_compose( a0, 0x90,   0, out ); break;
     case MK_4CC('S','L','A',0): alu_compose( a0, 0xCB20, 0, out ); break;
@@ -417,7 +418,6 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
             imm16( a0, out, 1 );
         }
         break;
-
     case MK_4CC('J','R',0,0):
         if( !conditional( a0, 0x20, out ) )
         {
@@ -427,9 +427,12 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
         else
             diff8( a1, out );
         break;
-
     case MK_4CC('C','A','L','L'):
-        if( !conditional( a0, 0xC4, out ) )
+        if( conditional( a0, 0xC4, out ) )
+        {
+            imm16( a1, out, 1 );
+        }
+        else
         {
             inst( 0xCD, out );
             imm16( a0, out, 1 );
@@ -439,13 +442,6 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
         if( !conditional( a0, 0xC0, out ) )
             inst( 0xC9, out );
         break;
-
-    /* FIXME: Adjust for PC offset!!!! */
-    case MK_4CC('D','J','N','Z'):
-        inst( 0x10, out );
-        diff8( a0, out );
-        break;
-
     case MK_4CC('R','S','T',0):
         switch( a0[0] )
         {
@@ -456,7 +452,6 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
         case '8': inst( 0xCF, out ); break;
         }
         break;
-
     case MK_4CC('P','U','S','H'):
         gen_prefix( a0[1], out );
         inst( 0xC5 | ((reg16( a0 ) & 0x07)<<4), out );
@@ -465,7 +460,6 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
         gen_prefix( a0[1], out );
         inst( 0xC1 | ((reg16( a0 ) & 0x07)<<4), out );
         break;
-
     case MK_4CC('I','N',0,0):
         if( *a1=='(' ) ++a1;
 
@@ -477,7 +471,6 @@ void assemble_line_z80( unsigned long mnemonic, const char* a0,
             imm8( a1, out );
         }
         break;
-
     case MK_4CC('O','U','T',0):
         if( *a0=='(' ) ++a0;
 

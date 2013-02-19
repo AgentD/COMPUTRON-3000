@@ -106,7 +106,7 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
             if( buffer[ j ] == '\'' )
                 is_quote = ~is_quote;
 
-            if( buffer[ j ]==';' && !is_quote )
+            if( (buffer[ j ]==';' || buffer[ j ]=='#') && !is_quote )
                 break;
         }
 
@@ -138,8 +138,8 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
 
         a1 = a0;
 
-        while( !isspace( *a1 ) && (*a1)!=',' && (*a1) ) ++a1;
-        while(  isspace( *a1 )               && (*a1) ) ++a1;
+        while( !isspace( *a1 ) && (*a1) ) ++a1;
+        while(  isspace( *a1 ) && (*a1) ) ++a1;
 
         if( *a1 == ',' )
         {
@@ -200,29 +200,16 @@ int assemble_file( FILE* input, FILE* output, assemble_line_fun asm_fun )
             break;
         }
         case MK_4CC('.','D','E','F'):
-            /* add null-terminator after definition name */
-            for( i=0; a0[i] && !isspace( a0[i] ) && a0[i]!=','; ++i );
-
-            a0[i] = '\0';
-
-            /* add definition */
             read_num( a1, &temp );
-            add_label( a0, temp, LABEL_TYPE_DEFINE );
+            add_label( a0, temp, LABEL_TYPE_DEFINE, output );
             break;
         default:
             if( buffer[j]==':' )
-            {
-                buffer[j] = '\0';
-                add_label( buffer, ftell( output ), LABEL_TYPE_LABEL );
-            }
+                add_label( buffer, ftell(output), LABEL_TYPE_LABEL, output );
             else
-            {
                 asm_fun( mnemonic, a0, a1, output );
-            }
         }
     }
-
-    post_process_labels( output );
 
     return 1;
 }
@@ -298,6 +285,15 @@ int read_num( const char* str, unsigned long* out )
 
         return 1;
     }
+    else if( str[0]=='$' )  /* alternate hex number indicator */
+    {
+        *out = strtol( str+1, NULL, 16 );
+
+        if( need_neg )
+            *out = (~(*out)) + 1;
+
+        return 1;
+    }
 
     /* last chance. Try if it is a define */
     if( get_define( str, out ) )
@@ -316,45 +312,42 @@ void imm8( const char* input, FILE* output )
 {
     unsigned long temp = 0;
 
-    if( !read_num( input, &temp ) )
-    {
-        require_label( input, ftell( output ), LABEL_NEED_0 );
-    }
-
-    fputc( temp & 0xFF, output );
+    if( read_num( input, &temp ) )
+        fputc( temp & 0xFF, output );
+    else
+        require_label( input, output, LABEL_NEED_0 );
 }
 
 void diff8( const char* input, FILE* output )
 {
     unsigned long temp = 0;
 
-    if( !read_num( input, &temp ) )
-    {
-        require_label( input, ftell( output ), LABEL_NEED_DIFF|LABEL_NEED_0 );
-    }
-
-    fputc( temp & 0xFF, output );
+    if( read_num( input, &temp ) )
+        fputc( temp & 0xFF, output );
+    else
+        require_label( input, output, LABEL_NEED_DIFF|LABEL_NEED_0 );
 }
 
 void imm16( const char* input, FILE* output, int le )
 {
     unsigned long temp = 0;
 
-    if( !read_num( input, &temp ) )
+    if( read_num( input, &temp ) )
     {
-        require_label( input, ftell( output ), le ? LABEL_NEED_01 :
-                                                    LABEL_NEED_10 );
-    }
-
-    if( le )
-    {
-        fputc(  temp     & 0xFF, output );
-        fputc( (temp>>8) & 0xFF, output );
+        if( le )
+        {
+            fputc(  temp     & 0xFF, output );
+            fputc( (temp>>8) & 0xFF, output );
+        }
+        else
+        {
+            fputc( (temp>>8) & 0xFF, output );
+            fputc(  temp     & 0xFF, output );
+        }
     }
     else
     {
-        fputc( (temp>>8) & 0xFF, output );
-        fputc(  temp     & 0xFF, output );
+        require_label( input, output, le ? LABEL_NEED_01 : LABEL_NEED_10 );
     }
 }
 
