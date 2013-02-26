@@ -1,3 +1,24 @@
+/*
+ * main.c
+ * This file is part of COMPUTRON 3000 emulator
+ *
+ * Copyright (C) 2013 - David Oberhollenzer
+ *
+ * COMPUTRON 3000 emulator is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * COMPUTRON 3000 emulator is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with COMPUTRON 3000 emulator.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,51 +27,64 @@
 
 
 
-static unsigned char rom[  1024 ];
-static unsigned char ram[ 31744 ];
-
-
-
 /* addresses for system bus devices */
 #define RS232_DEVICE_ADDRESS 0x0F
+
+#define BANK_SWITCH_REGISTER 0x00
+
+
+
+static byte ROM[ 1024 ];
+static byte KRAM[ 31744 ];
+static byte* RAM = NULL;
+
+static int ramsize = 0;
+static int bank_reg = 0xFF;
 
 
 
 /******************* memory access *******************/
 byte memory_read( int param, ushort address )
 {
+    int ROMSEL = (address<1024);
+    int MREQ_LO = !(address & 0x8000);
+    int address_long;
     (void)param;
 
-    /* A15 is high -> extended RAM */
-    if( address & 0x8000 )
+    if( MREQ_LO )
     {
-        return 0;
+        return ROMSEL ? ROM[ address ] : KRAM[ address-1024 ];
+    }
+    else
+    {
+        address_long = (address & 0x7FFF) | (bank_reg << 15);
+
+        if( RAM && address_long<ramsize )
+            return RAM[ address_long ];
     }
 
-    /* A15 is low, address < 1024 -> ROM */
-    if( address < 1024 )
-        return rom[ address ];
-
-    /* A15 is low, address >= 1024 -> RAM */
-    return ram[ address-1024 ];
+    return 0xFF;
 }
 
 void memory_write( int param, ushort address, byte data )
 {
+    int ROMSEL = (address<1024);
+    int MREQ_LO = !(address & 0x8000);
+    int address_long;
     (void)param;
 
-    /* A15 is high -> extended RAM */
-    if( address & 0x8000 )
+    if( MREQ_LO )
     {
-        return;
+        if( !ROMSEL )
+            KRAM[ address-1024 ] = data;
     }
+    else
+    {
+        address_long = (address & 0x7FFF) | (bank_reg << 15);
 
-    /* A15 is low, address < 1024 -> ROM */
-    if( address < 1024 )
-        rom[ address ] = data;
-
-    /* A15 is low, address >= 1024 -> RAM */
-    ram[ address-1024 ] = data;
+        if( RAM && address_long<ramsize )
+            RAM[ address_long ] = data;
+    }
 }
 
 /******************* bus I/O *******************/
@@ -58,25 +92,27 @@ byte bus_read( int param, ushort address )
 {
     (void)param;
 
-    address &= 0x00FF;
-
-    if( address == RS232_DEVICE_ADDRESS )
+    switch( address & 0xFF )
     {
+    case RS232_DEVICE_ADDRESS:
         return getchar( );
     }
 
-    return 0;
+    return 0xFF;
 }
 
 void bus_write( int param, ushort address, byte data )
 {
     (void)param;
 
-    address &= 0x00FF;
-
-    if( address == RS232_DEVICE_ADDRESS )
+    switch( address & 0xFF )
     {
+    case BANK_SWITCH_REGISTER:
+        bank_reg = data;
+        break;
+    case RS232_DEVICE_ADDRESS:
         putchar( data );
+        break;
     }
 }
 
@@ -108,12 +144,13 @@ int main( int argc, char** argv )
                 return EXIT_FAILURE;
             }
 
-            fread( rom, 1, sizeof(rom), romfile );
+            fread( ROM, 1, sizeof(ROM), romfile );
             fclose( romfile );
         }
         else if( !strcmp( argv[i], "-r" ) && (i<(argc-1)) )
         {
-            /*ram_bytes = atoi( argv[ i + 1 ] ) * 32768;*/
+            ramsize = atoi( argv[ i + 1 ] ) * 32768;
+            RAM = malloc( ramsize );
         }
     }
 
@@ -152,6 +189,8 @@ int main( int argc, char** argv )
         /* execute next instruction */
         Z80Execute( &cpu );
     }
+
+    free( RAM );
 
     return EXIT_SUCCESS;
 }
