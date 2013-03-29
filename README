@@ -6,8 +6,8 @@
   around the Z80 8 bit micro processor to toy and experiment with
   never-was-state-of-the-art hardware.
 
-  It is currently still in an early state, but the existing schematics should
-  (theoretically) already yield something working.
+  It is currently still in an early state. A working prototype has been built,
+  but there is no I/O hardware yet.
 
   The text below is (for now) just a random assortment of ideas that should be
   writted down somewhere.
@@ -19,7 +19,7 @@
   and conditions of the GNU General Public License, version 3 or later
   (at your choice).
 
-  For terms and condidtions of the GNU GPLv3 can be found in the file
+  The terms and condidtions of the GNU GPLv3 can be found in the file
   "LICENSE"
 
  Files
@@ -38,8 +38,124 @@
 
     software/ -> Pretty random collection of software for the system
      |
-     +- assembler/ -> Assembler source code
      +- emulator/  -> Emulator source code
+
+ Backplane Bus
+ *************
+
+    The system uses a DIN 41612 based bus to connect various parts of the
+    computer over a backplane.
+
+    The bus uses only the A-C variant of the DIN 41612 bus (i.e. no middle
+    row, only 64 out of 96 lines). The B line could be used for future
+    expansion.
+
+    The image below depicts the pinout of the bus connector, as seen when
+    looking onto the top layer of the PCB. The bus connector would point to
+    the right, the PCB itself would extent to the left:
+
+       A10  o o o  A11
+        A9  o o o  A12
+        A8  o o o  A13
+        A7  o o o  A14
+        A6  o o o  CLK
+        A5  o o o  D4
+        A4  o o o  D3
+        A3  o o o  D5
+        A2  o o o  D6
+        A1  o o o  D2
+        A0  o o o  D7
+            o o o  D0
+            o o o  D1
+      IORQ  o o o  INT
+       RST  o o o  NMI
+     BUSRQ  o o o  BUSACK
+        WR  o o o  ROMSEL
+    RAMSEL  o o o  IOR
+       IOW  o o o  MREQ_LOW
+   MREQ_HI  o o o
+            o o o
+            o o o
+            o o o
+            o o o
+     BANK0  o o o
+     BANK1  o o o
+     BANK2  o o o
+     BANK3  o o o
+     BANK4  o o o
+     BANK5  o o o
+     BANK6  o o o
+     BANK7  o o o
+
+
+    A0...A11: CPU address bus; A0...A7 are used for addressing I/O
+              devices, all lines together for addressing memory.
+    D0...D7: CPU data bus
+    BANK0...BANK7: contents of the bank switching register
+    CLK: the main system/CPU clock
+    INT: CPU interrupt line; pulled low to trigger CPU interrupt. Pulled high
+         using 4k7 resistor on CPU board.
+    NMI: CPU non maskable interrupt line; pulled low to trigger CPU NMI.
+         Pulled high using 4k7 resistor on CPU board.
+    IORQ: Pulled low when the CPU wants to access the I/O devices.
+    IOW: Pulled low when the CPU wants to write to an I/O device.
+    IOR: Pulled low when the CPU wants to read from an I/O device.
+    BUSRQ: CPU bus requrest; Pull low to request total bus ownership from CPU.
+           Pulled high using 4k7 resistor on CPU board.
+    BUSACK: Bus acknowledge; Pulled low by CPU to grant bus access as response
+            to a BUSRQ.
+    ROMSEL: ROM select; pulled low by CPU board when the CPU wants to access
+            the boot ROM. Only valid when MREQ_LOW is pulled low.
+    RAMSEL: RAM select; pulled low by CPU board when the CPU wants to access
+            shared RAM. Only valid when MREQ_LOW is pulled low.
+    MREQ_LOW: Memory request low (A15 line); pulled low when the CPU wants to
+              access the lower half of the memory (shared ROM and RAM).
+    MREQ_HI: Memory request high (!A15 line); pulled low when the CPU wants to
+             access the higher half of the memory (bankswitched extended memory).
+    WR: Pulled low when the CPU wants to write to the memory or I/O device it
+        is accessing, pulled high when it wants to read.
+    RST: Pulled low when the system performs a hardware reset. Reset circuit
+         and reset button are on CPU board.
+
+    The power supply is not on the system bus; seperate +5V and GND lines are
+    used on the backplane board. The +5V connector is on the top of the PCBs
+    (when the bus connector points to the right and you are looking at the
+    parts), the GND connector is at the bottom.
+
+ System Boards
+ *************
+
+  The system consists of the following boards plugged into the backplane:
+
+   - CPU BOARD
+      This board contains the z80 processor, the pull up resistors for the
+      control lines, the reset circuitry, the system clock generator and
+      decoding circuitry for the CPU control lines (MREQ_HI, MREQ_LOW,
+      ROMSEL, RAMSEL, IOR and IOW are generated here).
+   - BASE MEMORY BOARD
+      This board contains the ROM chip with the 1024 byte boot strap program
+      as well as the shared RAM chip with 31744 accessable bytes, together
+      making up the lower 32 kB of the 16 bit address space. The board also
+      contains the 8 bit bank switching register for selecting the bank to
+      be mapped to the upper 32 kB of the address space.
+   - EXTENDED MEMORY BOARD
+      This board contains extra bankswitched memory to be mapped into the
+      upper 32 kB of the address space. Multiple of those boards can be
+      plugged into a system and configured via jumpers to extend system
+      memory.
+
+ Programming software
+ ********************
+
+  Assembler, linker and other low level programming software are no longer
+  provided by this project. They have been moved to a seperate "minibin"
+  project.
+
+  An emulator is provided by this project. It can be found in the subdirectory
+  "software/emulator".
+
+  A custom C compiler is not available yet; SDCC or similar could be used
+  for now.
 
  Memory Map
  **********
@@ -58,8 +174,21 @@
 
      -> 16 bit physical address (64kB addrassable)
      -> lower 32 kB shared
-          -> 1kB boot ROM
-          -> 31kB shared RAM
-     -> upper 32 kB bank switched 
+          -> 1 kB boot ROM
+          -> 31 kB shared RAM
+     -> upper 32 kB bank switched
           -> up to 256 banks (256*32kB = 8192kB = 8MB!!)
+
+
+    The boot ROM contains the boot strap loader executed on system reset.
+    The shared RAM is intended for holding an operating system proper with
+    shared entry points, while the various banks are intended for being
+    used by processes running on the system and provide both an extension of
+    sytem memory beyond the addressable 64 kB and a simple form of virtual
+    memory, since code in the banks use the same address range.
+
+ I/O address space
+ *****************
+
+    0x00 - write only bank switching register.
 
