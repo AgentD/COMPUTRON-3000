@@ -6,8 +6,21 @@
   around the Z80 8 bit micro processor to toy and experiment with
   never-was-state-of-the-art hardware.
 
-  It is currently still in an early state. A working prototype has been built,
-  but there is no I/O hardware yet.
+  The goal of the project is to build a working and >usable< microcomputer
+  with a time sharing operating sysstem around the Z80 processor using
+  then-state-of-the-art technology, NOT USING ANY MICROCONTROLLERS,
+  PROGRAMMABLE HARDWARE OR EVEN PARTS NOT AVAILABLE IN DIP PACKAGES!!
+
+  The CPU can theoretically access up to 8 MB through an address decoder and
+  bank switching logic made out of 74HC parts.
+
+  The lower 32 kB of the address range are shared memory with 1 kB boot ROM,
+  the upper 32 kB are bankswitched.
+
+  So far, a working prototype has been built, consisting of a CPU board,
+  a memory board and an UART board prototype.
+
+  Project progress can be followed under http://stgoliath.wordpress.com
 
   The text below is (for now) just a random assortment of ideas that should be
   writted down somewhere.
@@ -33,12 +46,26 @@
     mem.txt   -> Base memory board descritption/schematics
     mem.pcb   -> Base memory board pcb layout
 
-    emm.txt   -> Extended memory board descritption/schematics
-    emm.pcb   -> Extended memory board pcb layout
+    himem.txt -> Memory extension board descritption/schematics
+    himem.pcb -> Memory extension board pcb layout
 
-    software/ -> Pretty random collection of software for the system
-     |
-     +- emulator/  -> Emulator source code
+    ide.txt   -> Parallel ATA board descritption/schematics
+    ide.pcb   -> Parallel ATA board pcb layout
+
+    int.txt   -> Interrupt controller board descritption/schematics
+    int.pcb   -> Interrupt controller board pcb layout
+
+    uart.txt  -> UART board descritption/schematics
+    uart.pcb  -> UART board pcb layout
+
+    vga.txt   -> VGA board descritption/schematics
+    vga.pcb   -> VGA board pcb layout
+
+    rom.s        -> Assembly source file for the boot rom
+    test.s       -> Assembly source file for testing the CPU board + base
+                    memory board combination
+    test_uart.s  -> Modified version of test.s that also tests the uart board
+                    by outputting test data at 9600 baud
 
  Backplane Bus
  *************
@@ -78,20 +105,23 @@
             o o o
             o o o
             o o o
-     BANK0  o o o
-     BANK1  o o o
-     BANK2  o o o
-     BANK3  o o o
-     BANK4  o o o
-     BANK5  o o o
-     BANK6  o o o
+     BANK0  o o o  IRQ7
+     BANK1  o o o  IRQ6
+     BANK2  o o o  IRQ5
+     BANK3  o o o  IRQ4
+     BANK4  o o o  IRQ3
+     BANK5  o o o  IRQ2
+     BANK6  o o o  IRQ1
      BANK7  o o o
 
 
-    A0...A11: CPU address bus; A0...A7 are used for addressing I/O
+    A0...A14: CPU address bus; A0...A7 are used for addressing I/O
               devices, all lines together for addressing memory.
     D0...D7: CPU data bus
     BANK0...BANK7: contents of the bank switching register
+    IRQ1...IRQ7: interrupt request lines. Lower number has higher priority.
+                 IRQ0 is wired up to the PIT on the interrupt controller
+                 board and not connected to the bus.
     CLK: the main system/CPU clock
     INT: CPU interrupt line; pulled low to trigger CPU interrupt. Pulled high
          using 4k7 resistor on CPU board.
@@ -108,14 +138,16 @@
             the boot ROM. Only valid when MREQ_LOW is pulled low.
     RAMSEL: RAM select; pulled low by CPU board when the CPU wants to access
             shared RAM. Only valid when MREQ_LOW is pulled low.
-    MREQ_LOW: Memory request low (A15 line); pulled low when the CPU wants to
-              access the lower half of the memory (shared ROM and RAM).
-    MREQ_HI: Memory request high (!A15 line); pulled low when the CPU wants to
-             access the higher half of the memory (bankswitched extended memory).
+    MREQ_LOW: Memory request low (A15 line ORed with MREQ of the CPU);
+              pulled low when the CPU wants to access the lower half of the
+              memory (shared ROM and RAM).
+    MREQ_HI: Memory request high (!A15 line ORed with MREQ of the CPU);
+             pulled low when the CPU wants to access the higher half of the
+             memory (bankswitched extended memory).
     WR: Pulled low when the CPU wants to write to the memory or I/O device it
         is accessing, pulled high when it wants to read.
-    RST: Pulled low when the system performs a hardware reset. Reset circuit
-         and reset button are on CPU board.
+    RST: Pulled low when the system performs a hardware reset. Power-on-reset
+         circuit and reset button are on CPU board.
 
     The power supply is not on the system bus; seperate +5V and GND lines are
     used on the backplane board. The +5V connector is on the top of the PCBs
@@ -138,24 +170,54 @@
       making up the lower 32 kB of the 16 bit address space. The board also
       contains the 8 bit bank switching register for selecting the bank to
       be mapped to the upper 32 kB of the address space.
-   - EXTENDED MEMORY BOARD
+   - MEMORY EXTENSION BOARD
       This board contains extra bankswitched memory to be mapped into the
       upper 32 kB of the address space. Multiple of those boards can be
-      plugged into a system and configured via jumpers to extend system
-      memory.
+      plugged into a system and configured via dip switches or jumpers to
+      extend system memory.
+   - INTERRUPT CONTROLLER BOARD
+      This board contains a 8259 interrupt controller and an 8254 programmable
+      intervall timer. One of the timer channels is connected to IRQ0 of the
+      interrupt controller.
+   - UART BOARD
+      This board contains a 16C550 type UART controller. The controller is
+      connected to a serial port via a MAX232 level shifter.
+   - ATA INTERFACE BOARD
+      This board contains a simple parallel ATA interface, mapping the ATA
+      interface into system address range and multiplexing the 16 bit
+      registers.
+   - VGA TERMINAL BOARD
+      This board contains a video RAM, mappable using the bankswitching
+      hardware, a VGA signal generator and pixel shifter. The VGA resolution
+      supported by the board is fixed to 640*400 pixel, monochrome (1 bit per
+      pixel).
 
- Programming software
- ********************
 
-  Assembler, linker and other low level programming software are no longer
-  provided by this project. They have been moved to a seperate "minibin"
-  project.
+ ROM ABI
+ *******
 
-  An emulator is provided by this project. It can be found in the subdirectory
-  "software/emulator".
+  The first kilobyte of system memory contains the boot ROM, to be executed
+  when the system resets. Since the first kilobyte also contains all the
+  reset and interrupt vectors of the Z80, a software interface is required.
 
-  A custom C compiler is not available yet; SDCC or similar could be used
-  for now.
+  The ROM code uses the following interrupt vectors:
+    0x0400 - system reset or RST 0 (jumped to after system init)
+    0x0403 - regular interrupt
+    0x0406 - non maskable interrupt
+    0x0409 - RST 1 (simply redirected using a jump)
+
+  On reset to address 0, the program in the ROM initialises the CPU and
+  peripheral hardware, loads the first sector of the systems IDE drive
+  to address 0x0400 and performs a jump to that address, so at least an
+  operating system boot loader has to start at base address 0x0400.
+
+  When an interrupt occours, the CPU jumps to location 0x0038 if it was a
+  maskable interrupt (other modes of the Z80 are not supported by hardware)
+  or to location 0x0066 if it was a non maskable interrupt.
+
+  The interrupt handling codes disables interrupts and jumps to the
+  coresponding interrupt vector address. Reenableing interrupts is left as a
+  task for the interrupt service routine.
 
  Memory Map
  **********
@@ -166,18 +228,22 @@
             |  Boot ROM  |
     0x03FF  |____________|
     0x0400  |            |
+            |            |
             | Shared RAM |
+            |            |
     0x7FFF  |____________|____________ ___
     0x8000  |            |            |   \
-            | RAM Bank 0 | RAM Bank 1 |   /
+            |            |            |   /
+            | RAM Bank 0 | RAM Bank 1 |   \
+            |            |            |   /
     0xFFFF  |____________|____________|___\
 
-     -> 16 bit physical address (64kB addrassable)
+     -> 16 bit physical address (64kB address space)
      -> lower 32 kB shared
           -> 1 kB boot ROM
           -> 31 kB shared RAM
      -> upper 32 kB bank switched
-          -> up to 256 banks (256*32kB = 8192kB = 8MB!!)
+          -> up to 256 banks (256*32kB = 8192kB = 8MB addressable!)
 
 
     The boot ROM contains the boot strap loader executed on system reset.
@@ -190,5 +256,7 @@
  I/O address space
  *****************
 
-    0x00 - write only bank switching register.
+    0x00:      write only bank switching register
+
+    0xF8-0xFF: serial port 16C550 registers
 
