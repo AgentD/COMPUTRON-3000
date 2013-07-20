@@ -2,6 +2,7 @@
 
 DI
 LD A, 0x55
+LD SP, 0x7FFF
 
 loop:
     OUT (0x00), A   # write A to bank switch register
@@ -9,6 +10,9 @@ loop:
 
     # execute the "wait" loop 5000 times
     LD BC, 5000
+    CALL wait
+
+    JR loop         # goto loop
 
 wait:
     NOP
@@ -29,5 +33,5 @@ wait:
     LD A, D
     JR NZ, wait     # if not, goto wait
 
-    JR loop         # goto loop
+    RET
 
