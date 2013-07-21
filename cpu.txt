@@ -9,30 +9,31 @@
        |_____|         |      A0.14|_____________  | A0...14 |
                        |           |             |/|         |
                        |       A15 |----> A15      |         |
-               VCC     |           |/|___________|\|         |
-              __|__    |      D0.7 |  ___________  | D0...7  |
-             | | | |   |           |\|           |/|         |
-             R R R R   |           |       BUSRQ ->| BUSRQ   |
-      NMI ---|-|-|-+-->|NMI  BUSACK|-------------->| BUSACK  |
-      INT ---|-|-+---->|INT    IORQ|-------------->| IORQ    |
-    BUSRQ ---|-+------>|BUSRQ  MREQ|----> MREQ     |         |
-      RST ---+----+-+->|RST      RD|----> RD       |         |
-      VCC --------|-|->|WAIT     WR|-------------->| WR      |
-                  C J  |___________|         RST ->| RST     |
-                  |_|                        INT ->| INT     |
-                  GND                        NMI ->| NMI     |
-                                          ROMSEL ->| ROMSEL  |
-                                         !ROMSEL ->| !ROMSEL |
-                                         MREQ_HI ->| MREQ_HI |
+                VCC    |           |/|___________|\|         |
+                 |_    |      D0.7 |  ___________  | D0...7  |
+                 | |   |           |\|           |/|         |
+                 R R   |           |               |         |
+      NMI -------|-+-->|NMI        |               |         |
+      INT -------+---->|INT    IORQ|-------------->| IORQ    |
+      VCC ------------>|BUSRQ  MREQ|----> MREQ     |         |
+      VCC ------------>|WAIT     RD|----> RD       |         |
+      RST ---+--+-+--->|RST      WR|-------------->| WR      |
+             |  | |    |___________|         RST ->| RST     |
+             R  R C                          INT ->| INT     |
+             |  |_|                          NMI ->| NMI     |
+             J    |                       ROMSEL ->| ROMSEL  |
+             |   GND                      RAMSEL ->| RAMSEL  |
+            VCC                          MREQ_HI ->| MREQ_HI |
                                         MREQ_LOW ->| MREQ_LOW|
-                                             IOR ->| IOR     |
-                                             IOW ->| IOW     |
-                                             CLK ->| CLK     |
+  J: jumper                                  IOR ->| IOR     |
+  R: resistor                                IOW ->| IOW     |
+  C: capacitor                               CLK ->| CLK     |
                                                    |_________|
+
 
     ROMSEL = (A[10...14] != 0) | RD
 
-   !ROMSEL = ~ROMSEL
+    RAMSEL = ~ROMSEL
    A15_INV = ~A15
 
        IOR =      RD | IORQ
@@ -43,7 +44,7 @@
 
              74688                          7404
             ________
-      GND -|Q0    P0|- A14        1: ROMSEL -|>o- !ROMSEL
+      GND -|Q0    P0|- A14        1: ROMSEL -|>o- RAMSEL
       GND -|Q1    P1|- A13        2:    A15 -|>o- A15_INV
       GND -|Q2    P2|- A12        3:    VCC -|>o-
       GND -|Q3    P3|- A11        4:    VCC -|>o-
