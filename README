@@ -96,7 +96,7 @@
             o o o  D1
       IORQ  o o o  INT
        RST  o o o  NMI
-     BUSRQ  o o o  BUSACK
+            o o o
         WR  o o o  ROMSEL
     RAMSEL  o o o  IOR
        IOW  o o o  MREQ_LOW
