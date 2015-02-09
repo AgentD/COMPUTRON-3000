@@ -20,8 +20,6 @@
   So far, a working prototype has been built, consisting of a CPU board,
   a memory board and an UART board prototype.
 
-  Project progress can be followed under http://stgoliath.wordpress.com
-
   The text below is (for now) just a random assortment of ideas that should be
   writted down somewhere.
 
@@ -40,202 +38,79 @@
 
   This list should provide some information on where to find what:
 
-    cpu.txt   -> CPU board descritption/schematics
-    cpu.pcb   -> CPU board pcb layout
-
-    mem.txt   -> Base memory board descritption/schematics
-    mem.pcb   -> Base memory board pcb layout
+    main.txt  -> Schematics of board with CPU, lower RAM and ROM
+    main.pcb  -> pcb layout of the board
 
     himem.txt -> Memory extension board descritption/schematics
     himem.pcb -> Memory extension board pcb layout
 
-    ide.txt   -> Parallel ATA board descritption/schematics
-    ide.pcb   -> Parallel ATA board pcb layout
-
-    int.txt   -> Interrupt controller board descritption/schematics
-    int.pcb   -> Interrupt controller board pcb layout
-
-    uart.txt  -> UART board descritption/schematics
-    uart.pcb  -> UART board pcb layout
-
-    vga.txt   -> VGA board descritption/schematics
-    vga.pcb   -> VGA board pcb layout
-
-    rom.s        -> Assembly source file for the boot rom
-    test.s       -> Assembly source file for testing the CPU board + base
-                    memory board combination
-    test_uart.s  -> Modified version of test.s that also tests the uart board
-                    by outputting test data at 9600 baud
-
  Backplane Bus
  *************
 
-    The system uses a DIN 41612 based bus to connect various parts of the
-    computer over a backplane.
-
-    The bus uses only the A-C variant of the DIN 41612 bus (i.e. no middle
-    row, only 64 out of 96 lines). The B line could be used for future
-    expansion.
+    The system uses a DIN 41617 based backplane I/O bus.
 
     The image below depicts the pinout of the bus connector, as seen when
     looking onto the top layer of the PCB. The bus connector would point to
     the right, the PCB itself would extent to the left:
 
-       A10  o o o  A11
-        A9  o o o  A12
-        A8  o o o  A13
-        A7  o o o  A14
-        A6  o o o  CLK
-        A5  o o o  D4
-        A4  o o o  D3
-        A3  o o o  D5
-        A2  o o o  D6
-        A1  o o o  D2
-        A0  o o o  D7
-            o o o  D0
-            o o o  D1
-      IORQ  o o o  INT
-       RST  o o o  NMI
-            o o o
-        WR  o o o  ROMSEL
-    RAMSEL  o o o  IOR
-       IOW  o o o  MREQ_LOW
-   MREQ_HI  o o o
-            o o o
-            o o o
-            o o o
-            o o o
-     BANK0  o o o  IRQ7
-     BANK1  o o o  IRQ6
-     BANK2  o o o  IRQ5
-     BANK3  o o o  IRQ4
-     BANK4  o o o  IRQ3
-     BANK5  o o o  IRQ2
-     BANK6  o o o  IRQ1
-     BANK7  o o o
+             o VCC
+     IORQ o
+             o CPU-INT
+      RST o
+             o WR
+       RD o
+             o IRQ0
+     IRQ1 o
+             o IRQ2
+     IRQ3 o
+             o IRQ4
+     IRQ5 o
+             o IRQ6
+     IRQ7 o
+             o A7
+       A6 o
+             o A5
+       A4 o
+             o A3
+       A2 o
+             o A1
+       D4 o
+             o A0
+       D3 o
+             o D5
+       D7 o
+             o D6
+       D0 o
+             o D2
+       D1 o
+             o GND
 
 
-    A0...A14: CPU address bus; A0...A7 are used for addressing I/O
-              devices, all lines together for addressing memory.
-    D0...D7: CPU data bus
-    BANK0...BANK7: contents of the bank switching register
+    A0...A7:     address lines
+    D0...D7:     data lines
     IRQ1...IRQ7: interrupt request lines. Lower number has higher priority.
-                 IRQ0 is wired up to the PIT on the interrupt controller
-                 board and not connected to the bus.
-    CLK: the main system/CPU clock
-    INT: CPU interrupt line; pulled low to trigger CPU interrupt. Pulled high
-         using 4k7 resistor on CPU board.
-    NMI: CPU non maskable interrupt line; pulled low to trigger CPU NMI.
-         Pulled high using 4k7 resistor on CPU board.
-    IORQ: Pulled low when the CPU wants to access the I/O devices.
-    IOW: Pulled low when the CPU wants to write to an I/O device.
-    IOR: Pulled low when the CPU wants to read from an I/O device.
-    BUSRQ: CPU bus requrest; Pull low to request total bus ownership from CPU.
-           Pulled high using 4k7 resistor on CPU board.
-    BUSACK: Bus acknowledge; Pulled low by CPU to grant bus access as response
-            to a BUSRQ.
-    ROMSEL: ROM select; pulled low by CPU board when the CPU wants to access
-            the boot ROM. Only valid when MREQ_LOW is pulled low.
-    RAMSEL: RAM select; pulled low by CPU board when the CPU wants to access
-            shared RAM. Only valid when MREQ_LOW is pulled low.
-    MREQ_LOW: Memory request low (A15 line ORed with MREQ of the CPU);
-              pulled low when the CPU wants to access the lower half of the
-              memory (shared ROM and RAM).
-    MREQ_HI: Memory request high (!A15 line ORed with MREQ of the CPU);
-             pulled low when the CPU wants to access the higher half of the
-             memory (bankswitched extended memory).
-    WR: Pulled low when the CPU wants to write to the memory or I/O device it
-        is accessing, pulled high when it wants to read.
-    RST: Pulled low when the system performs a hardware reset. Power-on-reset
-         circuit and reset button are on CPU board.
+                 Pulled low to trigger interrupt
+    CPU-INT:     CPU interrupt line; pulled low to trigger CPU interrupt.
+    IORQ:        Pulled low when the CPU wants to access the I/O devices.
+    WR:          Pulled low when the CPU wants to write to an I/O device.
+    RD:          Pulled low when the CPU wants to read from an I/O device.
+    RST:         Pulled low when the system performs a hardware reset.
 
-    The power supply is not on the system bus; seperate +5V and GND lines are
-    used on the backplane board. The +5V connector is on the top of the PCBs
-    (when the bus connector points to the right and you are looking at the
-    parts), the GND connector is at the bottom.
 
  System Boards
  *************
 
   The system consists of the following boards plugged into the backplane:
 
-   - CPU BOARD
-      This board contains the z80 processor, the pull up resistors for the
-      control lines, the reset circuitry, the system clock generator and
-      decoding circuitry for the CPU control lines (MREQ_HI, MREQ_LOW,
-      ROMSEL, RAMSEL, IOR and IOW are generated here).
-   - BASE MEMORY BOARD
-      This board contains the ROM chip with the 1024 byte boot strap program
-      as well as the shared RAM chip with 31744 accessable bytes, together
-      making up the lower 32 kB of the 16 bit address space. The board also
-      contains the 8 bit bank switching register for selecting the bank to
-      be mapped to the upper 32 kB of the address space.
+   - MAIN BOARD
+      This board contains the z80 processor with clock source,
+      lower address range RAM & ROM and an address decoder.
    - MEMORY EXTENSION BOARD
       This board contains extra bankswitched memory to be mapped into the
-      upper 32 kB of the address space. Multiple of those boards can be
-      plugged into a system and configured via dip switches or jumpers to
-      extend system memory.
-   - INTERRUPT CONTROLLER BOARD
-      This board contains a 8259 interrupt controller and an 8254 programmable
-      intervall timer. One of the timer channels is connected to IRQ0 of the
-      interrupt controller.
-   - UART BOARD
-      This board contains a 16C550 type UART controller. The controller is
-      connected to a serial port via a MAX232 level shifter.
-   - ATA INTERFACE BOARD
-      This board contains a simple parallel ATA interface, mapping the ATA
-      interface into system address range and multiplexing the 16 bit
-      registers.
+      upper 32 kB of the address space. The board uses an additional row of
+      pins to connect to the main board and must be plugged directly to the
+      main board.
 
-
- ROM ABI
- *******
-
-  The first kilobyte of system memory contains the boot ROM, to be executed
-  when the system resets. The first kilobyte also contains all the reset and
-  interrupt vectors of the Z80, so software redirection is required. Some of
-  the RST vectors are mapped to ROM internal functions that might be useful
-  for an OS kernel.
-
-  The ROM code uses the following interrupt vectors:
-    0x0400 - system reset (jumped to after system init)
-    0x0403 - RST 3 (simply redirected using a jump)
-    0x0406 - RST 4 (simply redirected using a jump)
-    0x0409 - RST 5 (simply redirected using a jump)
-    0x040C - RST 6 (simply redirected using a jump)
-    0x040F - regular interrupt or RST 7 (DI and then redirect using a jump)
-    0x0412 - non maskable interrupt (DI and then redirect using a jump)
-
-  The ROM code offers the following functions:
-    RST 0 : system reset (warm boot)
-    RST 1 : print string (HL -> pointer to null terminated string)
-    RST 2 : read sector
-                BC -> LBA28 low (B = high byte, C = low byte)
-                DE -> LBA28 high (D = high byte, E = low byte)
-                HL -> destination address
-                A -> sector count
-            return value: A==0 && zero flag set on failure,
-                          A!=0 && zero flag cleared on success
-
-
-  On reset to address 0, the program in the ROM initialises the CPU and
-  peripheral hardware, loads the first sector of the systems IDE drive
-  to address 0x0400 and performs a jump to that address, so at least an
-  operating system boot loader has to start at base address 0x0400.
-
-  The stack pointer is initialy set to address 0x7FFF.
-
-  When an interrupt or RST instruction occours, the ROM code handler jumps to
-  the addresses in the table above.
-
-  The interrupt handling codes (INT and NMI) disable interrupts before
-  jumping. Reenableing interrupts is left as a task for the kernel
-  interrupt service routine.
-
-  The ROM code initialises the UART controller with 9600 baud, 8 data bits,
-  1 stop bit, no parity bit, interrupts disabled, 14 byte FIFO threshold.
-
-  The IDE drive is accessed using LBA mode.
 
  Memory Map
  **********
@@ -275,6 +150,4 @@
  *****************
 
     0x00:      write only bank switching register
-
-    0xF8-0xFF: serial port 16C550 registers
 
