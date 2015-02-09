@@ -186,38 +186,56 @@
       This board contains a simple parallel ATA interface, mapping the ATA
       interface into system address range and multiplexing the 16 bit
       registers.
-   - VGA TERMINAL BOARD
-      This board contains a video RAM, mappable using the bankswitching
-      hardware, a VGA signal generator and pixel shifter. The VGA resolution
-      supported by the board is fixed to 640*400 pixel, monochrome (1 bit per
-      pixel).
 
 
  ROM ABI
  *******
 
   The first kilobyte of system memory contains the boot ROM, to be executed
-  when the system resets. Since the first kilobyte also contains all the
-  reset and interrupt vectors of the Z80, a software interface is required.
+  when the system resets. The first kilobyte also contains all the reset and
+  interrupt vectors of the Z80, so software redirection is required. Some of
+  the RST vectors are mapped to ROM internal functions that might be useful
+  for an OS kernel.
 
   The ROM code uses the following interrupt vectors:
-    0x0400 - system reset or RST 0 (jumped to after system init)
-    0x0403 - regular interrupt
-    0x0406 - non maskable interrupt
-    0x0409 - RST 1 (simply redirected using a jump)
+    0x0400 - system reset (jumped to after system init)
+    0x0403 - RST 3 (simply redirected using a jump)
+    0x0406 - RST 4 (simply redirected using a jump)
+    0x0409 - RST 5 (simply redirected using a jump)
+    0x040C - RST 6 (simply redirected using a jump)
+    0x040F - regular interrupt or RST 7 (DI and then redirect using a jump)
+    0x0412 - non maskable interrupt (DI and then redirect using a jump)
+
+  The ROM code offers the following functions:
+    RST 0 : system reset (warm boot)
+    RST 1 : print string (HL -> pointer to null terminated string)
+    RST 2 : read sector
+                BC -> LBA28 low (B = high byte, C = low byte)
+                DE -> LBA28 high (D = high byte, E = low byte)
+                HL -> destination address
+                A -> sector count
+            return value: A==0 && zero flag set on failure,
+                          A!=0 && zero flag cleared on success
+
 
   On reset to address 0, the program in the ROM initialises the CPU and
   peripheral hardware, loads the first sector of the systems IDE drive
   to address 0x0400 and performs a jump to that address, so at least an
   operating system boot loader has to start at base address 0x0400.
 
-  When an interrupt occours, the CPU jumps to location 0x0038 if it was a
-  maskable interrupt (other modes of the Z80 are not supported by hardware)
-  or to location 0x0066 if it was a non maskable interrupt.
+  The stack pointer is initialy set to address 0x7FFF.
 
-  The interrupt handling codes disables interrupts and jumps to the
-  coresponding interrupt vector address. Reenableing interrupts is left as a
-  task for the interrupt service routine.
+  When an interrupt or RST instruction occours, the ROM code handler jumps to
+  the addresses in the table above.
+
+  The interrupt handling codes (INT and NMI) disable interrupts before
+  jumping. Reenableing interrupts is left as a task for the kernel
+  interrupt service routine.
+
+  The ROM code initialises the UART controller with 9600 baud, 8 data bits,
+  1 stop bit, no parity bit, interrupts disabled, 14 byte FIFO threshold.
+
+  The IDE drive is accessed using LBA mode.
 
  Memory Map
  **********
