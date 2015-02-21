@@ -44,6 +44,12 @@
     himem.txt -> Memory extension board descritption/schematics
     himem.pcb -> Memory extension board pcb layout
 
+    uart.txt  -> UART board descritption/schematics
+    uart.pcb  -> UART board pcb layout
+
+    power.txt -> Schematics of board with power supply and reset circuit
+    power.pcb -> Power supply board PCB
+
  Backplane Bus
  *************
 
@@ -102,6 +108,9 @@
 
   The system consists of the following boards plugged into the backplane:
 
+   - POWER SUPPLY
+      This board holds a small 7805 based 5V power supply and an NE555 based
+      power on reset circuit.
    - MAIN BOARD
       This board contains the z80 processor with clock source,
       lower address range RAM & ROM and an address decoder.
@@ -110,6 +119,10 @@
       upper 32 kB of the address space. The board uses an additional row of
       pins to connect to the main board and must be plugged directly to the
       main board.
+   - UART BOARD
+      This board contains a 16C550 uart controller. The registers of the UART
+      controller are mapped to I/O address range 0xF8 to 0xFF. The UART board
+      triggers IRQ2 when the 16C550 triggers an interrupt.
 
 
  Memory Map
@@ -150,4 +163,5 @@
  *****************
 
     0x00:      write only bank switching register
+    0xF8-0xFF: 16C550 UART registers
 
