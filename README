@@ -50,6 +50,12 @@
     power.txt -> Schematics of board with power supply and reset circuit
     power.pcb -> Power supply board PCB
 
+    romprog/romprog.pcb -> PCB of a simple ATmega8 based ROM programmer
+    romprog/romprog.txt -> Schematics of the simple ROM programmer
+    romprog/avrprog.c   -> Source code for the AVR on the programmer board
+    romprog/romprog.c   -> Source code for the PC programm to interface
+                           to the ROM programmer
+
  Backplane Bus
  *************
 
