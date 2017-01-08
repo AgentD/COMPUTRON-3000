@@ -1,3 +1,8 @@
+
+  Circuit Description
+  *******************
+
+
 BUS-A3 -----------+
                   |
        B2 ___ Y2  |
@@ -59,4 +64,147 @@ BUS-A7 --|___|     B0                    |
                     |R1OUT   R1IN|<-+
             VCC --->|T1IN   T1OUT|--+---> RS232-RTS, RS232-DTR
                     |____________|
+
+
+
+  Controler Interface
+  *******************
+
+         addr | read                       | write
+         _____|____________________________|___________________________
+         0xF8 | receive holding reigster   | transmit holding reigster
+         0xF9 | interrupt enable reigster  | interrupt enable reigster
+         0xFA | interrupt statues reigster | FIFO control register
+         0xFB | line control register      | line control register
+         0xFC | modem control register     | modem control register
+         0xFD | line status register       | -- reserved --
+         0xFE | modem status register      | -- reserved --
+         0xFF | scratch pad register       | scratch pad register
+
+
+         If line control register bit 7 is set:
+
+         addr | read                       | write
+         _____|____________________________|___________________________
+         0xF8 | divisor latch low byte     | divisor latch low byte
+         0xF9 | divisor latch high byte    | divisor latch high byte
+
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Interrupt enable register:       - - - - X X X X    - - - - 0 0 0 0
+                                                 ^ ^ ^ ^
+                                                 | | | |
+                 modem status interrupt ---------+ | | |
+                 line status interrupt ------------+ | |
+                 holding register -------------------+ |
+                 holding register ---------------------+
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Interrupt status register:       X X - - X X X X    0 0 - - 0 0 0 1
+                                         ^ ^     ^ ^ ^ ^
+                                         | |     | | | |
+                 FIFO's enabled ---------+ |     | | | |
+                 FIFO's enabled -----------+     | | | |
+                 INT priority bit 2 -------------+ | | |
+                 INT priority bit 1 ---------------+ | |
+                 INT priority bit 0 -----------------+ |
+                 INT status ---------------------------+
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        FIFO control register:           X X - - X X X X    0 0 - - 0 0 0 1
+                                         ^ ^     ^ ^ ^ ^
+                                         | |     | | | |
+                 RX trigger (MSB) -------+ |     | | | |
+                 RX trigger (LSB) ---------+     | | | |
+                 DMA mode select ----------------+ | | |
+                 TX FIFO reset --------------------+ | |
+                 RX FIFO reset ----------------------+ |
+                 FIFO enable --------------------------+
+
+
+                    FCR 7|FCR 6|| RX trigger
+                    _____|_____||___________
+                      0  |  0  ||  1
+                      0  |  1  ||  4
+                      1  |  0  ||  8
+                      1  |  1  || 14
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Line control register:           X X X X X X X X    0 0 0 0 0 0 0 0
+                                         ^ ^ ^ ^ ^ ^ ^ ^
+                                         | | | | | | | |
+                 divisor latch enable ---+ | | | | | | |
+                 set break ----------------+ | | | | | |
+                 set parity -----------------+ | | | | |
+                 even parity ------------------+ | | | |
+                 parity enable ------------------+ | | |
+                 stop bits ------------------------+ | |
+                 word length (MSB) ------------------+ |
+                 word length (LSB) --------------------+
+
+
+                LCR 5|LCR 4|LCR 3|| Parity bit
+                _____|_____|_____||____________
+                    X|    X|    0|| none
+                    0|    0|    1|| odd
+                    0|    1|    1|| even
+                    1|    0|    1|| always 1
+                    1|    1|    1|| always 0
+
+                LCR 1|LCR 0||word lenght
+                _____|_____||___________
+                  0  |  0  || 5
+                  0  |  1  || 6
+                  1  |  0  || 7
+                  1  |  1  || 8
+
+                LCR 2||word lenght|stop bits
+                _____||___________|_________
+                   0 || 5,6,7,8   | 1
+                   1 || 5         | 1 - 1/2
+                   1 || 6,7,8     | 2
+
+
+                baud rate | divisor
+                __________|_________
+                      300 | 384
+                     9600 |  12
+                    38400 |   3
+                   115200 |   1
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Modem control register:          - - - X X X X X    - - - 0 0 0 0 0
+                                               ^ ^ ^ ^ ^
+                                               | | | | |
+                 loop back enable -------------+ | | | |
+                 GPIO 2 -------------------------+ | | |
+                 GPIO 1 ---------------------------+ | |
+                 request to send --------------------+ |
+                 data terminal ready ------------------+
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Line status register:            X X X X X X X X    0 1 1 0 0 0 0 0
+                                         ^ ^ ^ ^ ^ ^ ^ ^
+                                         | | | | | | | |
+                 FIFO data error --------+ | | | | | | |
+                 trans. empty -------------+ | | | | | |
+                 trans. holding empty -------+ | | | | |
+                 break interrupt --------------+ | | | |
+                 framing error ------------------+ | | |
+                 parity error ---------------------+ | |
+                 overrun error ----------------------+ |
+                 receive data ready -------------------+
+
+                                         7 6 5 4 3 2 1 0    Initial value
+        Modem status register:           X X X X X X X X    X X X X 0 0 0 0
+                                         ^ ^ ^ ^ ^ ^ ^ ^
+                                         | | | | | | | |
+                 carrier detect ---------+ | | | | | | |
+                 ring indicator -----------+ | | | | | |
+                 data set ready -------------+ | | | | |
+                 clear to send ----------------+ | | | |
+                 delta -CD ----------------------+ | | |
+                 delta -RI ------------------------+ | |
+                 delta -DSR -------------------------+ |
+                 delta -CTS ---------------------------+
 
